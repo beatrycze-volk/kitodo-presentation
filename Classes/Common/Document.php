@@ -515,17 +515,7 @@ abstract class Document
                 }
                 $content = GeneralUtility::getUrl($location);
                 if ($content !== false) {
-                    // TODO use single place to load xml
-                    // Turn off libxml's error logging.
-                    $libxmlErrors = libxml_use_internal_errors(true);
-                    // Disables the functionality to allow external entities to be loaded when parsing the XML, must be kept
-                    $previousValueOfEntityLoader = libxml_disable_entity_loader(true);
-                    // Try to load XML from file.
-                    $xml = simplexml_load_string($content);
-                    // reset entity loader setting
-                    libxml_disable_entity_loader($previousValueOfEntityLoader);
-                    // Reset libxml's error logging.
-                    libxml_use_internal_errors($libxmlErrors);
+                    $xml = Helper::getXmlFileAsString($content);
                     if ($xml !== false) {
                         /* @var $xml \SimpleXMLElement */
                         $xml->registerXPathNamespace('mets', 'http://www.loc.gov/METS/');
@@ -680,17 +670,7 @@ abstract class Document
                     // Get fulltext file.
                     $file = GeneralUtility::getUrl($this->getFileLocation($this->physicalStructureInfo[$id]['files'][$fileGrpFulltext]));
                     if ($file !== false) {
-                        // Turn off libxml's error logging.
-                        $libxmlErrors = libxml_use_internal_errors(true);
-                        // Disables the functionality to allow external entities to be loaded when parsing the XML, must be kept.
-                        $previousValueOfEntityLoader = libxml_disable_entity_loader(true);
-                        // Load XML from file.
-                        $rawTextXml = simplexml_load_string($file);
-                        // Reset entity loader setting.
-                        libxml_disable_entity_loader($previousValueOfEntityLoader);
-                        // Reset libxml's error logging.
-                        libxml_use_internal_errors($libxmlErrors);
-                        // Get the root element's name as text format.
+                        $rawTextXml = Helper::getXmlFileAsString($file);
                         $textFormat = strtoupper($rawTextXml->getName());
                     } else {
                         $this->logger->warning('Couldn\'t load fulltext file for structure node @ID "' . $id . '"');
