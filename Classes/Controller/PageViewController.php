@@ -139,6 +139,10 @@ class PageViewController extends AbstractController
     protected function addViewerJS()
     {
         // Viewer configuration.
+		$config = [
+			'forceAbsoluteUrl' => !empty($this->settings['forceAbsoluteUrl']),
+			'useInternalProxy' => !empty($this->settings['useInternalProxy']),
+		];
         $viewerConfiguration = '$(document).ready(function() {
                 if (dlfUtils.exists(dlfViewer)) {
                     tx_dlf_viewer = new dlfViewer({
@@ -148,7 +152,8 @@ class PageViewController extends AbstractController
                         images: ' . json_encode($this->images) . ',
                         fulltexts: ' . json_encode($this->fulltexts) . ',
                         annotationContainers: ' . json_encode($this->annotationContainers) . ',
-                        useInternalProxy: ' . ($this->settings['useInternalProxy'] ? 1 : 0) . '
+                        useInternalProxy: ' . ($this->settings['useInternalProxy'] ? 1 : 0) . ',
+						document: ' . json_encode($this->document->getDoc()->toArray($this->uriBuilder, $config)) . '
                     });
                 }
             });';
