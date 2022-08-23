@@ -116,7 +116,8 @@ class ToolboxController extends AbstractController
      *
      * @return void
      */
-    private function renderAnnotationTool()
+    // TODO
+    public function renderAnnotationTool()
     {
         if ($this->isDocMissingOrEmpty()) {
             // Quit without doing anything if required variables are not set.
