@@ -106,6 +106,7 @@ class MetadataController extends AbstractController
         if (empty($metadata) || ($this->settings['rootline'] == 1 && $metadata[0]['_id'] != $this->document->getDoc()->toplevelId)) {
             $data = $useOriginalIiifManifestMetadata ? $this->document->getDoc()->getManifestMetadata($this->document->getDoc()->toplevelId, $this->settings['storagePid']) : $this->document->getDoc()->getTitledata($this->settings['storagePid']);
             $data['_id'] = $this->document->getDoc()->toplevelId;
+            $data['_active'] = true;
             array_unshift($metadata, $data);
         }
         if (empty($metadata)) {
@@ -133,7 +134,7 @@ class MetadataController extends AbstractController
             $iiifData = [];
             foreach ($metadata as $row) {
                 foreach ($row as $key => $group) {
-                    if ($key == '_id') {
+                    if ($key == '_id' || $key === '_active') {
                         continue;
                     }
                     if (!is_array($group)) {
@@ -157,7 +158,7 @@ class MetadataController extends AbstractController
                         }
                     } else {
                         foreach ($group as $label => $value) {
-                            if ($label == '_id') {
+                            if ($label === '_id' || $label === '_active') {
                                 continue;
                             }
                             if (is_array($value)) {
@@ -294,17 +295,35 @@ class MetadataController extends AbstractController
         $metadata = [];
         if ($this->settings['rootline'] < 2) {
             // Get current structure's @ID.
-            $ids = [];
-            if (!empty($this->document->getDoc()->physicalStructure[$this->requestData['page']]) && !empty($this->document->getDoc()->smLinks['p2l'][$this->document->getDoc()->physicalStructure[$this->requestData['page']]])) {
-                foreach ($this->document->getDoc()->smLinks['p2l'][$this->document->getDoc()->physicalStructure[$this->requestData['page']]] as $logId) {
-                    $count = $this->document->getDoc()->getStructureDepth($logId);
-                    $ids[$count][] = $logId;
-                }
-            }
-            ksort($ids);
-            reset($ids);
+            $ids = $this->document->getDoc()->getLogicalSectionsOnPage($this->requestData['page']);
+
             // Check if we should display all metadata up to the root.
-            if ($this->settings['rootline'] == 1) {
+            if ($this->settings['prerenderAllSections'] ?? true) {
+                // Collect IDs of all logical structures. This is a flattened tree, so the
+                // order also works for rootline configurations.
+                $allIds = [];
+                function getIds($toc, &$output) {
+                    foreach ($toc as $entry) {
+                        $output[$entry['id']] = true;
+                        if (is_array($entry['children'])) {
+                            getIds($entry['children'], $output);
+                        }
+                    }
+                }
+                getIds($this->document->getDoc()->tableOfContents, $allIds);
+
+                $idIsActive = [];
+                foreach ($ids as $id) {
+                    foreach ($id as $sid) {
+                        $idIsActive[$sid] = true;
+                    }
+                }
+
+                $metadata = $this->getMetadataForIds(array_keys($allIds), $metadata);
+                foreach ($metadata as &$entry) {
+                    $entry['_active'] = isset($idIsActive[$entry['_id']]);
+                }
+            } elseif ($this->settings['rootline'] == 1) {
                 foreach ($ids as $id) {
                     $metadata = $this->getMetadataForIds($id, $metadata);
                 }
@@ -339,6 +358,7 @@ class MetadataController extends AbstractController
             }
             if (!empty($data)) {
                 $data['_id'] = $sid;
+                $data['_active'] = true;
                 $metadata[] = $data;
             }
         }
