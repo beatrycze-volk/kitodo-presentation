@@ -303,42 +303,22 @@ class ToolboxController extends AbstractController
      */
     private function getPageLink()
     {
-        $firstPageLink = '';
-        $secondPageLink = '';
-        $pageLinkArray = [];
         $pageNumber = $this->requestData['page'];
-        $fileGrpsDownload = GeneralUtility::trimExplode(',', $this->extConf['fileGrpDownload']);
-        // Get image link.
-        while ($fileGrpDownload = array_shift($fileGrpsDownload)) {
-            $firstFileGroupDownload = $this->doc->physicalStructureInfo[$this->doc->physicalStructure[$pageNumber]]['files'][$fileGrpDownload];
-            if (!empty($firstFileGroupDownload)) {
-                $firstPageLink = $this->doc->getFileLocation($firstFileGroupDownload);
-                // Get second page, too, if double page view is activated.
-                $secondFileGroupDownload = $this->doc->physicalStructureInfo[$this->doc->physicalStructure[$pageNumber + 1]]['files'][$fileGrpDownload];
-                if (
-                    $this->requestData['double']
-                    && $pageNumber < $this->doc->numPages
-                    && !empty($secondFileGroupDownload)
-                ) {
-                    $secondPageLink = $this->doc->getFileLocation($secondFileGroupDownload);
-                }
-                break;
-            }
+        $pageLinks = [
+            $this->doc->getPageLink($pageNumber),
+        ];
+        // Get second page, too, if double page view is activated.
+        if ($this->requestData['double'] && $pageNumber < $this->doc->numPages) {
+            $pageLinks[1] = $this->doc->getPageLink($pageNumber + 1);
         }
         if (
-            empty($firstPageLink)
-            && empty($secondPageLink)
+            empty($pageLinks[0])
+            && empty($pageLinks[1])
         ) {
             $this->logger->warning('File not found in fileGrps "' . $this->extConf['fileGrpDownload'] . '"');
         }
 
-        if (!empty($firstPageLink)) {
-            $pageLinkArray[0] = $firstPageLink;
-        }
-        if (!empty($secondPageLink)) {
-            $pageLinkArray[1] = $secondPageLink;
-        }
-        return $pageLinkArray;
+        return $pageLinks;
     }
 
     /**
