@@ -1400,6 +1400,12 @@ abstract class Doc
                 }
             }
 
+            // Get download URL
+            $pageLink = $this->getPageLink($page);
+            if (!empty($pageLink)) {
+                $pageEntry['download']['url'] = $pageLink;
+            }
+
             $result['pages'][] = $pageEntry;
         }
 
