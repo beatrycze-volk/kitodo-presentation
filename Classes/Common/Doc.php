@@ -450,7 +450,10 @@ abstract class Doc
         $xml = null;
         $iiif = null;
 
-        if ($instance = self::getDocCache($location) && !$forceReload) {
+        if (isset(self::$registry[$location])) {
+            return self::$registry[$location];
+        } elseif ($instance = self::getDocCache($location)) {
+            self::$registry[$location] = $instance;
             return $instance;
         } else {
             $instance = null;
@@ -494,6 +497,7 @@ abstract class Doc
         }
 
         if ($instance) {
+            self::$registry[$location] = $instance;
             self::setDocCache($location, $instance);
         }
 
