@@ -52,7 +52,7 @@ class ToolboxController extends AbstractController
      *
      * @return void
      */
-	// TODO(client-side)
+    // TODO(client-side)
     public function annotationtool()
     {
         if ($this->isDocMissingOrEmpty()) {

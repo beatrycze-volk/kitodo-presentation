@@ -163,7 +163,7 @@ var dlfViewer = function(settings){
      * @type {Object|null}
      * @private
      */
-    this.ov_view = null;
+    this.ovView = null;
 
     /**
      * @type {Boolean|false}
@@ -649,11 +649,11 @@ dlfViewer.prototype.getVisiblePages = function () {
         return this.initDoc.pages.map( (page, i) => ({
             pageNo: this.initDoc.query.minPage + i,
             pageObj: page
-        }))
+        }));
     } else {
         return this.docController.getVisiblePages();
     }
-}
+};
 
 /**
  *
@@ -673,7 +673,7 @@ dlfViewer.prototype.setDocController = function (docController) {
     this.docController.eventTarget.addEventListener('tx-dlf-stateChanged', () => {
         this.loadPages(this.getVisiblePages());
     });
-}
+};
 
 /**
  *
@@ -891,7 +891,7 @@ dlfViewer.prototype.addMagnifier = function (rotation) {
         extent: extent
     });
 
-    this.ov_view = new ol.View({
+    this.ovView = new ol.View({
         constrainRotation: false,
         projection: layerProj,
         center: ol.extent.getCenter(extent),
@@ -901,7 +901,7 @@ dlfViewer.prototype.addMagnifier = function (rotation) {
 
     this.ov_map = new ol.Map({
         target: 'ov_map',
-        view: this.ov_view,
+        view: this.ovView,
         controls: [],
         interactions: []
     });
@@ -914,7 +914,7 @@ dlfViewer.prototype.addMagnifier = function (rotation) {
 
     this.map.on('pointermove', function (evt) {
         mousePosition = dlfViewer.map.getEventCoordinate(evt.originalEvent);
-        dlfViewer.ov_view.setCenter(mousePosition);
+        dlfViewer.ovView.setCenter(mousePosition);
     });
 
     var adjustViews = function(sourceView, destMap) {
