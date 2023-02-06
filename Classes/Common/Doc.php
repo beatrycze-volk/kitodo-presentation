@@ -76,20 +76,6 @@ abstract class Doc
     public static $extKey = 'dlf';
 
     /**
-     * MIME types that are excluded from PageViewProxy.
-     *
-     * TODO: Consider moving this to extension configuration
-     *
-     * @var string[]
-     * @access public
-     */
-    public static $nonProxyMimeTypes = [
-        'application/vnd.kitodo.iiif',
-        'application/vnd.netfpx',
-        'application/vnd.kitodo.zoomify',
-    ];
-
-    /**
      * This holds the configuration for all supported metadata encodings
      * @see loadFormats()
      *
@@ -1388,9 +1374,12 @@ abstract class Doc
                     }
                 }
 
+                $extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey);
+                $nonProxyMimeTypes = GeneralUtility::trimExplode(',', $extConf['nonProxyMimeTypes']);
+
                 // Only deliver static images via the internal PageViewProxy.
                 // (For IIP and IIIF, the viewer needs to build and access a separate metadata URL, see `getMetadataURL`.)
-                if (in_array($fileGrp, $proxyFileGroups) && !in_array($file['mimetype'], self::$nonProxyMimeTypes)) {
+                if (in_array($fileGrp, $proxyFileGroups) && !in_array($file['mimetype'], $nonProxyMimeTypes)) {
                     // Configure @action URL for form.
                     $file['url'] = $uriBuilder
                         ->reset()
