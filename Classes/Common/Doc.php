@@ -412,13 +412,9 @@ abstract class Doc
      *
      * @access public
      *
-     * @return array|null
+     * @return array
      */
-    public function getAllFiles()
-    {
-        // TODO: Implement for IiifManifest
-        return null;
-    }
+    public abstract function getAllFiles();
 
     /**
      * This is a singleton class, thus an instance must be created by this method

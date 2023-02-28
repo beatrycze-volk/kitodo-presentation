@@ -436,6 +436,57 @@ final class IiifManifest extends Doc
 
     /**
      * {@inheritDoc}
+     * @see \Kitodo\Dlf\Common\Doc::getAllFiles()
+     */
+    public function getAllFiles()
+    {
+        $files = [];
+        $canvases = $this->iiif->getDefaultCanvases();
+        foreach ($canvases as $canvas) {
+            $images = $canvas->getImages();
+            foreach ($images as $image) {
+                $resource = $image->getResource();
+                $fileId = $resource->getId();
+                if (empty($fileId)) {
+                    continue;
+                }
+
+                $mimetype = $this->getFileMimeType($fileId);
+                if (empty($mimetype)) {
+                    continue;
+                }
+
+                $files[$fileId] = [
+                    'url' => $fileId,
+                    'mimetype' => $mimetype,
+                ];
+            }
+
+            $otherFiles = $canvas->getOtherContent();
+            foreach ($otherFiles as $otherFile) {
+                $fileId = $$otherFile->getId();
+                if (empty($fileId)) {
+                    continue;
+                }
+
+                $mimetype = $this->getFileMimeType($fileId);
+                if (empty($mimetype)) {
+                    continue;
+                }
+
+                // in IIIF id is URL
+                $files[$fileId] = [
+                    'url' => $fileId,
+                    'mimetype' => $mimetype,
+                ];
+            }
+
+        }
+        return $files;
+    }
+
+    /**
+     * {@inheritDoc}
      * @see Doc::getLogicalStructure()
      */
     public function getLogicalStructure($id, $recursive = false)
