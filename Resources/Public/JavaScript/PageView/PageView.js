@@ -691,6 +691,7 @@ dlfViewer.prototype.loadPages = function (visiblePages) {
     for (const page of visiblePages) {
         const file = this.docController.findFileByKind(page.pageNo, 'images');
         if (file === undefined) {
+            /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
             console.warn(`No image file found on page ${page.pageNo}`);
             continue;
         }
@@ -770,6 +771,7 @@ dlfViewer.prototype.initLoadFulltexts = function (visiblePages) {
                 this.fulltextsLoaded_[key] = dlfFullTextUtils.fetchFullTextDataFromServer(fulltext.url, image, xOffset);
             }
         } else {
+            /* eslint no-console: ["error", { allow: ["warn", "error"] }] */
             console.warn("No fulltext file found");
         }
 
