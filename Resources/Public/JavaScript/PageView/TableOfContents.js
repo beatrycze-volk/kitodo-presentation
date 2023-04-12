@@ -77,31 +77,20 @@ class dlfTableOfContents {
                 isExpanded = true;
             }
 
-            if (tocItemState === dlfTocState.Normal) {
-                tocItem.classList.add('tx-dlf-toc-no');
-            } else {
-                tocItem.classList.remove('tx-dlf-toc-no');
-            }
-
-            if (tocItemState === dlfTocState.Active) {
-                tocItem.classList.add('active', 'tx-dlf-toc-act');
-            } else {
-                tocItem.classList.remove('active', 'tx-dlf-toc-act');
-            }
-
-            if (tocItemState === dlfTocState.Current) {
-                tocItem.classList.add('current', 'tx-dlf-toc-cur');
-            } else {
-                tocItem.classList.remove('current', 'tx-dlf-toc-cur');
-            }
-
-            if (isExpanded) {
-                tocItem.classList.remove('dlf-toc-collapsed');
-            } else {
-                tocItem.classList.add('dlf-toc-collapsed');
-            }
+            this.updateItem(tocItem, tocItemState === dlfTocState.Normal, 'tx-dlf-toc-no');
+            this.updateItem(tocItem, tocItemState === dlfTocState.Active, 'active', 'tx-dlf-toc-act');
+            this.updateItem(tocItem, tocItemState === dlfTocState.Current, 'current', 'tx-dlf-toc-cur');
+            this.updateItem(tocItem, !isExpanded, 'dlf-toc-collapsed');
 
             // "submenu" class does not change
         });
+    }
+
+    updateItem(tocItem, condition, ...tokens) {
+        if (condition) {
+            tocItem.classList.add(tokens);
+        } else {
+            tocItem.classList.remove(tokens);
+        }
     }
 }
