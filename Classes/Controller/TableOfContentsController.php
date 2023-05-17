@@ -287,26 +287,29 @@ class TableOfContentsController extends AbstractController
     }
 
     /**
-     * Sort menu by orderlabel - currently implemented for newspaper.
+     * Sort menu by orderlabel.
      *
      * @param array &$menu
      * @return void
      */
     private function sortMenu(&$menu) {
         if ($menu[0]['type'] == $this->getTranslatedType("newspaper")) {
-            $this->sortMenuForNewspapers($menu);
+            $this->sortSubMenu($menu);
+        }
+        if ($menu[0]['type'] == $this->getTranslatedType("year")) {
+            $this->sortSubMenu($menu);
         }
     }
 
     /**
-     * Sort menu years of the newspaper by orderlabel.
+     * Sort sub menu e.g. years of the newspaper by orderlabel.
      *
      * @param array &$menu
      * @return void
      */
-    private function sortMenuForNewspapers(&$menu) {
-        usort($menu[0]['_SUB_MENU'], function ($firstYear, $secondYear) {
-            return $firstYear['orderlabel'] <=> $secondYear['orderlabel'];
+    private function sortSubMenu(&$menu) {
+        usort($menu[0]['_SUB_MENU'], function ($firstElement, $secondElement) {
+            return $firstElement['orderlabel'] <=> $secondElement['orderlabel'];
         });
     }
 }
