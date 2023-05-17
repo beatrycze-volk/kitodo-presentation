@@ -219,7 +219,6 @@ class MetadataController extends AbstractController
                             }
                         }
                         if (!empty($metadataValue)) {
-                            $metadataArray[$i][$metadataName][0] = $metadataArray[$i][$metadataName][0];
                             // Link title to pageview.
                             if ($this->settings['linkTitle'] && $metadataSection['_id']) {
                                 $details = $this->document->getDoc()->getLogicalStructure($metadataSection['_id']);
@@ -257,8 +256,6 @@ class MetadataController extends AbstractController
                         foreach ($metadataArray[$i][$metadataName] as &$langValue) {
                             $langValue = Helper::getLanguageName($langValue);
                         }
-                    } elseif (!empty($metadataValue)) {
-                        $metadataArray[$i][$metadataName][0] = $metadataArray[$i][$metadataName][0];
                     }
 
                     if (is_array($metadataArray[$i][$metadataName])) {
