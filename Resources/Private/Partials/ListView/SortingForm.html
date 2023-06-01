@@ -19,9 +19,16 @@
         <f:variable name="numDocuments" value="{pageOffset + settings.list.paginate.itemsPerPage}" />
 
         <p class="tx-dlf-sortinfo">
-            <f:translate
-                key="listview.count"
-                arguments="{0:'{pageOffset + 1}', 1:'{f:if(condition: \'{numDocuments} > {allDocuments}\', then: \'{allDocuments}\', else: \'{numDocuments}\')}', 2:'{allDocuments}'}" />
+            <f:if condition="{allDocuments} > 0">
+                <f:then>
+                    <f:translate
+                        key="listview.count"
+                        arguments="{0:'{pageOffset + 1}',1:'{f:if(condition: \'{numDocuments} > {allDocuments}\', then: \'{allDocuments}\', else: \'{numDocuments}\')}', 2:'{allDocuments}'}" />
+                </f:then>
+                <f:else>
+                    <f:translate key='LLL:EXT:dlf/Resources/Private/Language/locallang.xlf:listview.nohits' />
+                </f:else>
+            </f:if>
         </p>
 
         <f:form section="showResults" action="{action}" controller="{Controller}" name="searchParameter" method="post" class="tx-dlf-search-form">
