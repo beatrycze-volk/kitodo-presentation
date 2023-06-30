@@ -103,3 +103,18 @@ plugin.tx_dlf_search {
         }
     }
 }
+
+plugin.tx_dlf_tableofcontents {
+    settings {
+        titleReplacements {
+            0 {
+                type = issue
+                fields = type,year
+            }
+            1 {
+                type = volume
+                fields = volume
+            }
+        }
+    }
+}
