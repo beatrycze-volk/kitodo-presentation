@@ -147,7 +147,7 @@ class TableOfContentsController extends AbstractController
         $doc = $this->document->getDoc();
         if (
             $doc instanceof MetsDocument
-            && ($entry['points'] === $doc->parentHref || $entry['type'] === 'multivolume_work')
+            && ($entry['points'] === $doc->parentHref || $this->isMultiElement($entry['type']))
             && !empty($this->document->getPartof())
         ) {
             unset($entry['points']);
@@ -277,12 +277,27 @@ class TableOfContentsController extends AbstractController
      *
      * @access private
      *
-     * @param array $type
+     * @param string $type
      *
      * @return string
      */
     private function getTranslatedType($type) {
         return Helper::translate($type, 'tx_dlf_structures', $this->settings['storagePid']);
+    }
+
+    /**
+     * Check if element has type 'multivolume_work' or 'multipart_manuscript'.
+     * Those elements have for each child one parent anchor file instead one
+     * parent file for all children elements.
+     *
+     * @access private
+     *
+     * @param string $type
+     *
+     * @return bool
+     */
+    private function isMultiElement($type) {
+        return $type === 'multivolume_work' || $type === 'multipart_manuscript';
     }
 
     /**
