@@ -595,7 +595,9 @@ dlfViewerFullTextControl.prototype.getTextLineSpan = function(textLine) {
         textLineSpan.append(this.getItemForTextLineSpan(item));
     }
 
-    textLineSpan.append(dlfTmplFulltext.space.cloneNode());
+    if (content[content.length - 1].get('type') != 'hyp') {
+        textLineSpan.append(dlfTmplFulltext.space.cloneNode());
+    }
 
     return textLineSpan;
 };
