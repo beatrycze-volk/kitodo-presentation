@@ -14,6 +14,7 @@ namespace Kitodo\Dlf\Controller;
 use Kitodo\Dlf\Common\SolrPaginator;
 use Kitodo\Dlf\Common\Solr\Solr;
 use Kitodo\Dlf\Domain\Model\Collection;
+use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Pagination\SimplePagination;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
@@ -71,15 +72,15 @@ class CollectionController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function listAction(): void
+    public function listAction(): ResponseInterface
     {
         $solr = Solr::getInstance($this->settings['solrcore']);
 
         if (!$solr->ready) {
             $this->logger->error('Apache Solr not available');
-            return;
+            return $this->htmlResponse();
         }
         // We only care about the UID and partOf in the results and want them sorted
         $params['fields'] = 'uid,partof';
@@ -154,6 +155,8 @@ class CollectionController extends AbstractController
         }
 
         $this->view->assign('collections', $processedCollections);
+
+        return $this->htmlResponse();
     }
 
     /**
@@ -163,9 +166,9 @@ class CollectionController extends AbstractController
      *
      * @param Collection $collection The collection object
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function showAction(Collection $collection): void
+    public function showAction(Collection $collection): ResponseInterface
     {
         $searchParams = $this->getParametersSafely('searchParameter');
 
@@ -173,7 +176,7 @@ class CollectionController extends AbstractController
         $solr = Solr::getInstance($this->settings['solrcore']);
         if (!$solr->ready) {
             $this->logger->error('Apache Solr not available');
-            return;
+            return $this->htmlResponse();
         }
 
         // Pagination of Results: Pass the currentPage to the fluid template to calculate current index of search result.
@@ -222,6 +225,8 @@ class CollectionController extends AbstractController
         $this->view->assign('lastSearch', $searchParams);
         $this->view->assign('sortableMetadata', $sortableMetadata);
         $this->view->assign('listedMetadata', $listedMetadata);
+
+        return $this->htmlResponse();
     }
 
     /**
@@ -229,9 +234,9 @@ class CollectionController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function showSortedAction(): void
+    public function showSortedAction(): ResponseInterface
     {
         // if search was triggered, get search parameters from POST variables
         $searchParams = $this->getParametersSafely('searchParameter');
@@ -244,5 +249,6 @@ class CollectionController extends AbstractController
         // output is done by show action
         $this->forward('show', null, null, ['searchParameter' => $searchParams, 'collection' => $collection]);
 
+        return $this->htmlResponse();
     }
 }

@@ -19,6 +19,7 @@ use Kitodo\Dlf\Domain\Repository\ActionLogRepository;
 use Kitodo\Dlf\Domain\Repository\MailRepository;
 use Kitodo\Dlf\Domain\Repository\BasketRepository;
 use Kitodo\Dlf\Domain\Repository\PrinterRepository;
+use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Mail\MailMessage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MailUtility;
@@ -182,9 +183,9 @@ class BasketController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         $basket = $this->getBasketData();
 
@@ -224,6 +225,8 @@ class BasketController extends AbstractController
             }
             $this->view->assign('entries', $entries);
         }
+
+        return $this->htmlResponse();
     }
 
     /**

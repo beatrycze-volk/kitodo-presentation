@@ -12,7 +12,7 @@
 namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Domain\Model\PageSelectForm;
-use TYPO3\CMS\Core\Utility\MathUtility;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Controller class for the plugin 'Navigation'.
@@ -56,15 +56,15 @@ class NavigationController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return;
+            return $this->htmlResponse();
         }
 
         // Set default values if not set.
@@ -112,5 +112,7 @@ class NavigationController extends AbstractController
             $features[$feature] = true;
         }
         $this->view->assign('features', $features);
+
+        return $this->htmlResponse();
     }
 }

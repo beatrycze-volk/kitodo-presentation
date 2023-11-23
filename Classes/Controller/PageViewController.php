@@ -12,8 +12,8 @@
 namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\IiifManifest;
+use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\MathUtility;
 use Ubl\Iiif\Presentation\Common\Model\Resources\ManifestInterface;
 use Ubl\Iiif\Presentation\Common\Vocabulary\Motivation;
 
@@ -58,15 +58,15 @@ class PageViewController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissingOrEmpty()) {
             // Quit without doing anything if required variables are not set.
-            return;
+            return $this->htmlResponse();
         }
 
         $this->setPage();
@@ -91,6 +91,8 @@ class PageViewController extends AbstractController
         $this->view->assign('images', $this->images);
         $this->view->assign('docId', $this->requestData['id']);
         $this->view->assign('page', $this->requestData['page']);
+
+        return $this->htmlResponse();
     }
 
     /**

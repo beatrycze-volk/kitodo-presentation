@@ -12,9 +12,10 @@
 namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\SolrPaginator;
-use TYPO3\CMS\Core\Pagination\SimplePagination;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
+use Psr\Http\Message\ResponseInterface;
+use TYPO3\CMS\Core\Pagination\SimplePagination;
 
 /**
  * Controller class for the plugin 'ListView'.
@@ -73,9 +74,9 @@ class ListViewController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         $this->searchParams = $this->getParametersSafely('searchParameter');
 
@@ -124,5 +125,7 @@ class ListViewController extends AbstractController
         $this->view->assign('lastSearch', $this->searchParams);
         $this->view->assign('sortableMetadata', $sortableMetadata);
         $this->view->assign('listedMetadata', $listedMetadata);
+
+        return $this->htmlResponse();
     }
 }

@@ -19,6 +19,7 @@ use Kitodo\Dlf\Common\Solr\Solr;
 use Kitodo\Dlf\Domain\Model\Collection;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
+use Psr\Http\Message\ResponseInterface;
 use Solarium\Component\Result\FacetSet;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Information\Typo3Version;
@@ -100,15 +101,15 @@ class SearchController extends AbstractController
      *
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         $listViewSearch = false;
         // Quit without doing anything if required variables are not set.
         if (empty($this->settings['solrcore'])) {
             $this->logger->warning('Incomplete plugin configuration');
-            return;
+            return $this->htmlResponse();
         }
 
         // if search was triggered, get search parameters from POST variables
@@ -206,6 +207,8 @@ class SearchController extends AbstractController
         }
 
         $this->view->assign('viewData', $this->viewData);
+
+        return $this->htmlResponse();
     }
 
     /**

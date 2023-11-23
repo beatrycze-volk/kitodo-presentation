@@ -14,10 +14,10 @@ namespace Kitodo\Dlf\Controller;
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Common\Helper;
 use Kitodo\Dlf\Common\IiifManifest;
-use Kitodo\Dlf\Common\MetsDocument;
 use Kitodo\Dlf\Domain\Repository\CollectionRepository;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
 use Kitodo\Dlf\Domain\Repository\StructureRepository;
+use Psr\Http\Message\ResponseInterface;
 use Ubl\Iiif\Context\IRI;
 
 /**
@@ -99,15 +99,15 @@ class MetadataController extends AbstractController
     /**
      * @access public
      *
-     * @return void
+     * @return ResponseInterface
      */
-    public function mainAction(): void
+    public function mainAction(): ResponseInterface
     {
         // Load current document.
         $this->loadDocument();
         if ($this->isDocMissing()) {
             // Quit without doing anything if required variables are not set.
-            return;
+            return $this->htmlResponse();
         } else {
             // Set default values if not set.
             $this->setDefault('rootline', 0);
@@ -137,11 +137,13 @@ class MetadataController extends AbstractController
         // @phpstan-ignore-next-line
         if (!$metadata) {
             $this->logger->warning('No metadata found for document with UID ' . $this->document->getUid());
-            return;
+            return $this->htmlResponse();
         }
         ksort($metadata);
 
         $this->printMetadata($metadata);
+
+        return $this->htmlResponse();
     }
 
     /**
