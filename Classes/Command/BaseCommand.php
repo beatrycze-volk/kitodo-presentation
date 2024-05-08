@@ -89,6 +89,11 @@ class BaseCommand extends Command
      */
     protected ConfigurationManager $configurationManager;
 
+    /**
+     * @var PersistenceManager
+     */
+    protected PersistenceManager $persistenceManager;
+
     public function __construct(
         CollectionRepository $collectionRepository,
         DocumentRepository $documentRepository,
@@ -103,6 +108,7 @@ class BaseCommand extends Command
         $this->libraryRepository = $libraryRepository;
         $this->structureRepository = $structureRepository;
         $this->configurationManager = $configurationManager;
+        $this->persistenceManager = GeneralUtility::makeInstance(PersistenceManager::class);
     }
 
     /**
@@ -196,13 +202,19 @@ class BaseCommand extends Command
      *
      * @return bool true on success, false otherwise
      */
-    protected function saveToDatabase(Document $document): bool
+    protected function saveToDatabase(Document $document, $io = null): bool
     {
         $doc = $document->getCurrentDocument();
         if ($doc === null) {
             return false;
         }
-        $persistenceManager = GeneralUtility::makeInstance(PersistenceManager::class);
+
+        $io->writeln('Document uid: ' . $document->getUid());
+        if ($document->getUid() !== null && $this->persistenceManager->isNewObject($document)) {
+            $document = $this->documentRepository->findByUid($document->getUid());
+            $document->setCurrentDocument($doc);
+        }
+
         $doc->cPid = $this->storagePid;
 
         $metadata = $doc->getToplevelMetadata($this->storagePid);
@@ -227,7 +239,7 @@ class BaseCommand extends Command
         $document->setStructure($structure);
 
         if (is_array($metadata['collection'])) {
-            $this->addCollections($document, $metadata['collection'], $persistenceManager);
+            $this->addCollections($document, $metadata['collection']);
         }
 
         // set identifiers
@@ -257,7 +269,7 @@ class BaseCommand extends Command
 
         // Get UID of parent document.
         if ($document->getDocumentFormat() === 'METS') {
-            $document->setPartof($this->getParentDocumentUidForSaving($document));
+            $document->setPartof($this->getParentDocumentUidForSaving($document, $io));
         }
 
         if ($document->getUid() === null) {
@@ -268,7 +280,7 @@ class BaseCommand extends Command
             $this->documentRepository->update($document);
         }
 
-        $persistenceManager->persistAll();
+        $this->persistenceManager->persistAll();
 
         return true;
     }
@@ -283,7 +295,7 @@ class BaseCommand extends Command
      *
      * @return int The parent document's id.
      */
-    protected function getParentDocumentUidForSaving(Document $document): int
+    protected function getParentDocumentUidForSaving(Document $document, $io): int
     {
         $doc = $document->getCurrentDocument();
 
@@ -298,13 +310,13 @@ class BaseCommand extends Command
                     // create new Document object
                     $parentDocument = GeneralUtility::makeInstance(Document::class);
                 }
-
+                $io->writeln('Document parent uid: ' . $document->getUid());
                 $parentDocument->setOwner($this->owner);
                 $parentDocument->setCurrentDocument($parent);
                 $parentDocument->setLocation($doc->parentHref);
                 $parentDocument->setSolrcore($document->getSolrcore());
 
-                $success = $this->saveToDatabase($parentDocument);
+                $success = $this->saveToDatabase($parentDocument, $io);
 
                 if ($success === true) {
                     // add to index
@@ -324,11 +336,10 @@ class BaseCommand extends Command
      * 
      * @param Document &$document
      * @param array $collections
-     * @param PersistenceManager $persistenceManager
      *
      * @return void
      */
-    private function addCollections(Document &$document, array $collections, PersistenceManager $persistenceManager): void
+    private function addCollections(Document &$document, array $collections): void
     {
         foreach ($collections as $collection) {
             $documentCollection = $this->collectionRepository->findOneByIndexName($collection);
@@ -343,7 +354,7 @@ class BaseCommand extends Command
                 // add to CollectionRepository
                 $this->collectionRepository->add($documentCollection);
                 // persist collection to prevent duplicates
-                $persistenceManager->persistAll();
+                $this->persistenceManager->persistAll();
             }
             // add to document
             $document->addCollection($documentCollection);

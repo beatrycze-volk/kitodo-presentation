@@ -170,22 +170,36 @@ class ReindexCommand extends BaseCommand
             }
 
             if ($dryRun) {
-                $io->writeln('DRY RUN: Would index ' . ($id + 1) . '/' . count($documents) . '  with UID "' . $document->getUid() . '" ("' . $document->getLocation() . '") on PID ' . $this->storagePid . ' and Solr core ' . $solrCoreUid . '.');
+                $io->writeln('DRY RUN: Would index ' . ($id + 1) . '/' . count($documents) . ' with UID "' . $document->getUid() . '" ("' . $document->getLocation() . '") on PID ' . $this->storagePid . ' and Solr core ' . $solrCoreUid . '.');
             } else {
                 if ($io->isVerbose()) {
                     $io->writeln(date('Y-m-d H:i:s') . ' Indexing ' . ($id + 1) . '/' . count($documents) . ' with UID "' . $document->getUid() . '" ("' . $document->getLocation() . '") on PID ' . $this->storagePid . ' and Solr core ' . $solrCoreUid . '.');
                 }
+                $io->writeln('Peak usage - begin: ' . round(memory_get_peak_usage() / 1024) . ' KB');
+                $io->writeln('--------------------------------------------------');
+                $io->writeln('Current usage 1: ' . round(memory_get_usage() / 1024) . ' KB');
                 $document->setCurrentDocument($doc);
+                $io->writeln('Current usage 2: ' . round(memory_get_usage() / 1024) . ' KB - after setCurrentDocument()');
                 // save to database
-                $this->saveToDatabase($document);
+                $this->saveToDatabase($document, $io);
+                $io->writeln('Current usage 3: ' . round(memory_get_usage() / 1024) . ' KB - after saveToDatabase()');
                 // add to index
                 Indexer::add($document, $this->documentRepository);
+                $io->writeln('Current usage 4: ' . round(memory_get_usage() / 1024) . ' KB - after add()');
             }
-            // Clear document registry to prevent memory exhaustion.
-            AbstractDocument::clearRegistry();
+            // Clear document and persistence cache to prevent memory exhaustion.
+            AbstractDocument::clearDocumentCache();
+            $io->writeln('Current usage 5: ' . round(memory_get_usage() / 1024) . ' KB - after clearDocumentCache()');
+            $this->persistenceManager->clearState();
+            $io->writeln('Current usage 6: ' . round(memory_get_usage() / 1024) . ' KB - after clearState()');
+            $io->writeln('--------------------------------------------------');
+            $io->writeln('Peak usage - end: ' . round(memory_get_peak_usage() / 1024) . ' KB');
         }
 
         $io->success('All done!');
+
+        $io->writeln('Current usage:' . round(memory_get_usage() / 1024) . ' KB');
+        $io->writeln('   Peak usage: ' . round(memory_get_peak_usage() / 1024) . ' KB');
 
         return BaseCommand::SUCCESS;
     }
