@@ -202,14 +202,13 @@ class BaseCommand extends Command
      *
      * @return bool true on success, false otherwise
      */
-    protected function saveToDatabase(Document $document, $io = null): bool
+    protected function saveToDatabase(Document $document): bool
     {
         $doc = $document->getCurrentDocument();
         if ($doc === null) {
             return false;
         }
 
-        $io->writeln('Document uid: ' . $document->getUid());
         if ($document->getUid() !== null && $this->persistenceManager->isNewObject($document)) {
             $document = $this->documentRepository->findByUid($document->getUid());
             $document->setCurrentDocument($doc);
@@ -269,7 +268,7 @@ class BaseCommand extends Command
 
         // Get UID of parent document.
         if ($document->getDocumentFormat() === 'METS') {
-            $document->setPartof($this->getParentDocumentUidForSaving($document, $io));
+            $document->setPartof($this->getParentDocumentUidForSaving($document));
         }
 
         if ($document->getUid() === null) {
@@ -295,7 +294,7 @@ class BaseCommand extends Command
      *
      * @return int The parent document's id.
      */
-    protected function getParentDocumentUidForSaving(Document $document, $io): int
+    protected function getParentDocumentUidForSaving(Document $document): int
     {
         $doc = $document->getCurrentDocument();
 
@@ -310,13 +309,12 @@ class BaseCommand extends Command
                     // create new Document object
                     $parentDocument = GeneralUtility::makeInstance(Document::class);
                 }
-                $io->writeln('Document parent uid: ' . $document->getUid());
                 $parentDocument->setOwner($this->owner);
                 $parentDocument->setCurrentDocument($parent);
                 $parentDocument->setLocation($doc->parentHref);
                 $parentDocument->setSolrcore($document->getSolrcore());
 
-                $success = $this->saveToDatabase($parentDocument, $io);
+                $success = $this->saveToDatabase($parentDocument);
 
                 if ($success === true) {
                     // add to index

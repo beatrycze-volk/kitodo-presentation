@@ -113,6 +113,12 @@ class Solr implements LoggerAwareInterface
      */
     protected Client $service;
 
+    public static function clearRegistry(): void
+    {
+        // Reset registry array.
+        self::$registry = [];
+    }
+
     /**
      * Add a new core to Apache Solr
      *

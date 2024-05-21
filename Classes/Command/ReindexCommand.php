@@ -15,12 +15,15 @@ namespace Kitodo\Dlf\Command;
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Command\BaseCommand;
 use Kitodo\Dlf\Common\Indexer;
+use Kitodo\Dlf\Common\Solr\Solr;
+use Kitodo\Dlf\Domain\Model\Document;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
+use TYPO3\CMS\Extbase\Persistence\QueryInterface;
 
 /**
  * CLI Command for re-indexing collections into database and Solr.
@@ -143,8 +146,24 @@ class ReindexCommand extends BaseCommand
         }
 
         if (!empty($input->getOption('all'))) {
-            // Get all documents.
-            $documents = $this->documentRepository->findAll();
+            $count = $this->documentRepository->countAll();
+            $offset = 0;
+            $limit = 100;
+
+            while ($offset < $count) {
+                $io->writeln('Offset: ' . $offset);
+                $io->writeln('------------------------------------------------------');
+                $io->writeln('Current usage: ' . round(memory_get_usage() / 1024) . ' KB before reindexDocuments');
+                $io->writeln('------------------------------------------------------');
+                $documents = $this->documentRepository->findAll()->getQuery()->setLimit($limit)->setOffset($offset)->execute();
+                $this->reindexDocuments($dryRun, $count, $offset, $solrCoreUid, $documents, $io);
+                $io->writeln('------------------------------------------------------');
+                $io->writeln('Current usage: ' . round(memory_get_usage() / 1024) . ' KB after reindexDocuments');
+                $io->writeln('Collected cycles: ' . gc_collect_cycles());
+                $io->writeln('------------------------------------------------------');
+                unset($documents);
+                $offset += $limit;
+            }
         } elseif (
             !empty($input->getOption('coll'))
             && !is_array($input->getOption('coll'))
@@ -161,46 +180,69 @@ class ReindexCommand extends BaseCommand
             return BaseCommand::FAILURE;
         }
 
-        foreach ($documents as $id => $document) {
-            $doc = AbstractDocument::getInstance($document->getLocation(), ['storagePid' => $this->storagePid], true);
-
-            if ($doc === null) {
-                $io->warning('WARNING: Document "' . $document->getLocation() . '" could not be loaded. Skip to next document.');
-                continue;
-            }
-
-            if ($dryRun) {
-                $io->writeln('DRY RUN: Would index ' . ($id + 1) . '/' . count($documents) . ' with UID "' . $document->getUid() . '" ("' . $document->getLocation() . '") on PID ' . $this->storagePid . ' and Solr core ' . $solrCoreUid . '.');
-            } else {
-                if ($io->isVerbose()) {
-                    $io->writeln(date('Y-m-d H:i:s') . ' Indexing ' . ($id + 1) . '/' . count($documents) . ' with UID "' . $document->getUid() . '" ("' . $document->getLocation() . '") on PID ' . $this->storagePid . ' and Solr core ' . $solrCoreUid . '.');
-                }
-                $io->writeln('Peak usage - begin: ' . round(memory_get_peak_usage() / 1024) . ' KB');
-                $io->writeln('--------------------------------------------------');
-                $io->writeln('Current usage 1: ' . round(memory_get_usage() / 1024) . ' KB');
-                $document->setCurrentDocument($doc);
-                $io->writeln('Current usage 2: ' . round(memory_get_usage() / 1024) . ' KB - after setCurrentDocument()');
-                // save to database
-                $this->saveToDatabase($document, $io);
-                $io->writeln('Current usage 3: ' . round(memory_get_usage() / 1024) . ' KB - after saveToDatabase()');
-                // add to index
-                Indexer::add($document, $this->documentRepository);
-                $io->writeln('Current usage 4: ' . round(memory_get_usage() / 1024) . ' KB - after add()');
-            }
-            // Clear document and persistence cache to prevent memory exhaustion.
-            AbstractDocument::clearDocumentCache();
-            $io->writeln('Current usage 5: ' . round(memory_get_usage() / 1024) . ' KB - after clearDocumentCache()');
-            $this->persistenceManager->clearState();
-            $io->writeln('Current usage 6: ' . round(memory_get_usage() / 1024) . ' KB - after clearState()');
-            $io->writeln('--------------------------------------------------');
-            $io->writeln('Peak usage - end: ' . round(memory_get_peak_usage() / 1024) . ' KB');
-        }
-
         $io->success('All done!');
 
-        $io->writeln('Current usage:' . round(memory_get_usage() / 1024) . ' KB');
+        $io->writeln('Current usage: ' . round(memory_get_usage() / 1024) . ' KB');
         $io->writeln('   Peak usage: ' . round(memory_get_peak_usage() / 1024) . ' KB');
 
         return BaseCommand::SUCCESS;
+    }
+
+    private function reindexDocuments(bool $dryRun, int $count, int $offset, int $solrCoreUid, $documents, SymfonyStyle $io): void
+    {
+        foreach ($documents as $id => $document) {
+            $this->reindexDocument($dryRun, $count, $offset, $solrCoreUid, $document, $id, $io);
+            unset($id, $document); 
+         }
+    }
+
+    /**
+     * Undocumented function
+     *
+     * @access private
+     *
+     * @param boolean $dryRun
+     * @param integer $count
+     * @param integer $solrCoreUid
+     * @param Document $document
+     * @param integer $id
+     * @param SymfonyStyle $io
+     *
+     * @return void
+     */
+    private function reindexDocument(bool $dryRun, int $count, int $offset, int $solrCoreUid, Document $document, int $id, SymfonyStyle $io): void
+    {
+        $doc = AbstractDocument::getInstance($document->getLocation(), ['storagePid' => $this->storagePid], true);
+
+        if ($doc === null) {
+            $io->warning('WARNING: Document "' . $document->getLocation() . '" could not be loaded. Skip to next document.');
+        } else {
+            if ($dryRun) {
+                $io->writeln('DRY RUN: Would index ' . ($id + $offset + 1) . '/' . $count . ' with UID "' . $document->getUid() . '" ("' . $document->getLocation() . '") on PID ' . $this->storagePid . ' and Solr core ' . $solrCoreUid . '.');
+            } else {
+                if ($io->isVerbose()) {
+                    $io->writeln(date('Y-m-d H:i:s') . ' Indexing ' . ($id + 1) . '/' . $count . ' with UID "' . $document->getUid() . '" ("' . $document->getLocation() . '") on PID ' . $this->storagePid . ' and Solr core ' . $solrCoreUid . '.');
+                }
+                $io->writeln('Peak usage - begin: ' . round(memory_get_peak_usage() / 1024) . ' KB');
+                $io->writeln('------------------------------------------------------');
+                $document->setCurrentDocument($doc);
+                $io->writeln('Current usage 1: ' . round(memory_get_usage() / 1024) . ' KB - after setCurrentDocument()');
+                // save to database
+                $this->saveToDatabase($document);
+                $io->writeln('Current usage 2: ' . round(memory_get_usage() / 1024) . ' KB - after saveToDatabase()');
+                // add to index
+                Indexer::add($document, $this->documentRepository);
+                $io->writeln('Current usage 3: ' . round(memory_get_usage() / 1024) . ' KB - after add()');
+            }
+            // Clear document and persistence cache to prevent memory exhaustion.
+            AbstractDocument::clearDocumentCache();
+            $io->writeln('Current usage 4: ' . round(memory_get_usage() / 1024) . ' KB - after clearDocumentCache()');
+            $this->persistenceManager->clearState();
+            $io->writeln('Current usage 5: ' . round(memory_get_usage() / 1024) . ' KB - after clearState()');
+            Solr::clearRegistry();
+            $io->writeln('Current usage 6: ' . round(memory_get_usage() / 1024) . ' KB - after clearRegistry()');
+            $io->writeln('------------------------------------------------------');
+            $io->writeln('Peak usage - end: ' . round(memory_get_peak_usage() / 1024) . ' KB');
+        }
     }
 }

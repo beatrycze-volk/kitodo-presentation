@@ -95,76 +95,15 @@ class Indexer
      */
     public static function add(Document $document, DocumentRepository $documentRepository): bool
     {
-        if (in_array($document->getUid(), self::$processedDocs)) {
+        $documentUid = $document->getUid();
+        
+        // Check if the document has already been processed
+        if (in_array($documentUid, self::$processedDocs)) {
             return true;
-        } elseif (self::solrConnect($document->getSolrcore(), $document->getPid())) {
-            $success = true;
-            Helper::getLanguageService()->includeLLFile('EXT:dlf/Resources/Private/Language/locallang_be.xlf');
-            // Handle multi-volume documents.
-            $parentId = $document->getPartof();
-            if ($parentId) {
-                // get parent document
-                $parent = $documentRepository->findByUid($parentId);
-                if ($parent) {
-                    // get XML document of parent
-                    $doc = AbstractDocument::getInstance($parent->getLocation(), ['storagePid' => $parent->getPid()], true);
-                    if ($doc !== null) {
-                        $parent->setCurrentDocument($doc);
-                        $success = self::add($parent, $documentRepository);
-                    } else {
-                        Helper::log('Could not load parent document with UID ' . $document->getCurrentDocument()->parentId, LOG_SEVERITY_ERROR);
-                        return false;
-                    }
-                }
-            }
-            try {
-                // Add document to list of processed documents.
-                self::$processedDocs[] = $document->getUid();
-                // Delete old Solr documents.
-                $updateQuery = self::$solr->service->createUpdate();
-                $updateQuery->addDeleteQuery('uid:' . $document->getUid());
-                self::$solr->service->update($updateQuery);
-
-                // Index every logical unit as separate Solr document.
-                foreach ($document->getCurrentDocument()->tableOfContents as $logicalUnit) {
-                    if ($success) {
-                        $success = self::processLogical($document, $logicalUnit);
-                    } else {
-                        break;
-                    }
-                }
-                // Index full text files if available.
-                if ($document->getCurrentDocument()->hasFulltext) {
-                    foreach ($document->getCurrentDocument()->physicalStructure as $pageNumber => $xmlId) {
-                        if ($success) {
-                            $success = self::processPhysical($document, $pageNumber, $document->getCurrentDocument()->physicalStructureInfo[$xmlId]);
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                // Commit all changes.
-                $updateQuery = self::$solr->service->createUpdate();
-                $updateQuery->addCommit();
-                self::$solr->service->update($updateQuery);
-
-                if (!(Environment::isCli())) {
-                    if ($success) {
-                        self::addMessage(
-                            sprintf(Helper::getLanguageService()->getLL('flash.documentIndexed'), $document->getTitle(), $document->getUid()),
-                            'flash.done',
-                            FlashMessage::OK
-                        );
-                    } else {
-                        self::addErrorMessage(sprintf(Helper::getLanguageService()->getLL('flash.documentNotIndexed'), $document->getTitle(), $document->getUid()));
-                    }
-                }
-                return $success;
-            } catch (\Exception $e) {
-                self::handleException($e->getMessage());
-                return false;
-            }
-        } else {
+        }
+        
+        // Connect to Solr
+        if (!self::solrConnect($document->getSolrcore(), $document->getPid())) {
             if (!(Environment::isCli())) {
                 self::addMessage(
                     Helper::getLanguageService()->getLL('flash.solrNoConnection'),
@@ -173,6 +112,78 @@ class Indexer
                 );
             }
             Helper::log('Could not connect to Apache Solr server', LOG_SEVERITY_ERROR);
+            return false;
+        }
+        
+        try {
+            $success = true;
+            Helper::getLanguageService()->includeLLFile('EXT:dlf/Resources/Private/Language/locallang_be.xlf');
+            
+            // Handle multi-volume documents
+            $parentId = $document->getPartof();
+            if ($parentId) {
+                // Get parent document
+                $parent = $documentRepository->findByUid($parentId);
+                if ($parent) {
+                    // Get XML document of parent
+                    $doc = AbstractDocument::getInstance($parent->getLocation(), ['storagePid' => $parent->getPid()], true);
+                    if ($doc !== null) {
+                        $parent->setCurrentDocument($doc);
+                        // Recursively add parent document
+                        $success = self::add($parent, $documentRepository);
+                    } else {
+                        Helper::log('Could not load parent document with UID ' . $documentUid, LOG_SEVERITY_ERROR);
+                        return false;
+                    }
+                }
+            }
+            
+            // Add document to the list of processed documents
+            self::$processedDocs[] = $documentUid;
+            
+            // Delete old Solr documents
+            $updateQuery = self::$solr->service->createUpdate();
+            $updateQuery->addDeleteQuery('uid:' . $documentUid);
+            self::$solr->service->update($updateQuery);
+            
+            // Index logical units
+            foreach ($document->getCurrentDocument()->tableOfContents as $logicalUnit) {
+                if (!$success) {
+                    break;
+                }
+                $success = self::processLogical($document, $logicalUnit);
+            }
+            
+            // Index full text files if available
+            if ($success && $document->getCurrentDocument()->hasFulltext) {
+                foreach ($document->getCurrentDocument()->physicalStructure as $pageNumber => $xmlId) {
+                    if (!$success) {
+                        break;
+                    }
+                    $success = self::processPhysical($document, $pageNumber, $document->getCurrentDocument()->physicalStructureInfo[$xmlId]);
+                }
+            }
+            
+            // Commit changes to Solr
+            $updateQuery->addCommit();
+            self::$solr->service->update($updateQuery);
+            
+            // Display messages
+            if (!(Environment::isCli())) {
+                if ($success) {
+                    self::addMessage(
+                        sprintf(Helper::getLanguageService()->getLL('flash.documentIndexed'), $document->getTitle(), $documentUid),
+                        'flash.done',
+                        FlashMessage::OK
+                    );
+                } else {
+                    self::addErrorMessage(sprintf(Helper::getLanguageService()->getLL('flash.documentNotIndexed'), $document->getTitle(), $documentUid));
+                }
+            }
+            
+            return $success;
+        } catch (\Exception $e) {
+            self::handleException($e->getMessage());
             return false;
         }
     }
@@ -239,42 +250,55 @@ class Indexer
                 )
                 ->from('tx_dlf_metadata')
                 ->where(
-                    $queryBuilder->expr()->eq('tx_dlf_metadata.pid', (int) $pid),
+                    $queryBuilder->expr()->eq('tx_dlf_metadata.pid', $pid),
                     Helper::whereExpression('tx_dlf_metadata')
                 )
                 ->execute();
 
+            // Initialize fields arrays
+            $fields = [
+                'tokenized' => [],
+                'stored' => [],
+                'indexed' => [],
+                'sortables' => [],
+                'facets' => [],
+                'autocomplete' => [],
+                'fieldboost' => [],
+            ];
+
             while ($indexing = $result->fetchAssociative()) {
                 if ($indexing['index_tokenized']) {
-                    self::$fields['tokenized'][] = $indexing['index_name'];
+                    $fields['tokenized'][] = $indexing['index_name'];
                 }
                 if (
                     $indexing['index_stored']
                     || $indexing['is_listed']
                 ) {
-                    self::$fields['stored'][] = $indexing['index_name'];
+                    $fields['stored'][] = $indexing['index_name'];
                 }
                 if (
                     $indexing['index_indexed']
                     || $indexing['index_autocomplete']
                 ) {
-                    self::$fields['indexed'][] = $indexing['index_name'];
+                    $fields['indexed'][] = $indexing['index_name'];
                 }
                 if ($indexing['is_sortable']) {
-                    self::$fields['sortables'][] = $indexing['index_name'];
+                    $fields['sortables'][] = $indexing['index_name'];
                 }
                 if ($indexing['is_facet']) {
-                    self::$fields['facets'][] = $indexing['index_name'];
+                    $fields['facets'][] = $indexing['index_name'];
                 }
                 if ($indexing['index_autocomplete']) {
-                    self::$fields['autocomplete'][] = $indexing['index_name'];
+                    $fields['autocomplete'][] = $indexing['index_name'];
                 }
                 if ($indexing['index_boost'] > 0.0) {
-                    self::$fields['fieldboost'][$indexing['index_name']] = floatval($indexing['index_boost']);
+                    $fields['fieldboost'][$indexing['index_name']] = floatval($indexing['index_boost']);
                 } else {
-                    self::$fields['fieldboost'][$indexing['index_name']] = false;
+                    $fields['fieldboost'][$indexing['index_name']] = false;
                 }
             }
+
+            self::$fields = $fields;
             self::$fieldsLoaded = true;
         }
     }
@@ -293,80 +317,86 @@ class Indexer
      */
     protected static function processLogical(Document $document, array $logicalUnit): bool
     {
-        $success = true;
         $doc = $document->getCurrentDocument();
         $doc->cPid = $document->getPid();
+        
         // Get metadata for logical unit.
         $metadata = $doc->metadataArray[$logicalUnit['id']];
-        if (!empty($metadata)) {
-            $metadata['author'] = self::removeAppendsFromAuthor($metadata['author']);
-            // set Owner if available
-            if ($document->getOwner()) {
-                $metadata['owner'][0] = $document->getOwner()->getIndexName();
-            }
-            // Create new Solr document.
-            $updateQuery = self::$solr->service->createUpdate();
-            $solrDoc = self::getSolrDocument($updateQuery, $document, $logicalUnit);
-            if (MathUtility::canBeInterpretedAsInteger($logicalUnit['points'])) {
-                $solrDoc->setField('page', $logicalUnit['points']);
-            }
-            if ($logicalUnit['id'] == $doc->toplevelId) {
-                $solrDoc->setField('thumbnail', $doc->thumbnail);
-            } elseif (!empty($logicalUnit['thumbnailId'])) {
-                $solrDoc->setField('thumbnail', $doc->getFileLocation($logicalUnit['thumbnailId']));
-            }
-            // There can be only one toplevel unit per UID, independently of backend configuration
-            $solrDoc->setField('toplevel', $logicalUnit['id'] == $doc->toplevelId ? true : false);
-            $solrDoc->setField('title', $metadata['title'][0], self::$fields['fieldboost']['title']);
-            $solrDoc->setField('volume', $metadata['volume'][0], self::$fields['fieldboost']['volume']);
-            // verify date formatting
-            if(strtotime($metadata['date'][0])) {
-                $solrDoc->setField('date', self::getFormattedDate($metadata['date'][0]));
-            }
-            $solrDoc->setField('record_id', $metadata['record_id'][0]);
-            $solrDoc->setField('purl', $metadata['purl'][0]);
-            $solrDoc->setField('location', $document->getLocation());
-            $solrDoc->setField('urn', $metadata['urn']);
-            $solrDoc->setField('license', $metadata['license']);
-            $solrDoc->setField('terms', $metadata['terms']);
-            $solrDoc->setField('restrictions', $metadata['restrictions']);
+        
+        if (empty($metadata)) {
+            return true;
+        }
+
+        // Process metadata directly without unnecessary intermediate variables
+        $metadata['author'] = self::removeAppendsFromAuthor($metadata['author']);
+        // Set Owner if available
+        if ($document->getOwner()) {
+            $metadata['owner'][0] = $document->getOwner()->getIndexName();
+        }
+
+        // Create new Solr document.
+        $updateQuery = self::$solr->service->createUpdate();
+        $solrDoc = self::getSolrDocument($updateQuery, $document, $logicalUnit);
+
+        // Set fields in Solr document
+        $solrDoc->setField('page', MathUtility::canBeInterpretedAsInteger($logicalUnit['points']) ? $logicalUnit['points'] : null);
+        $solrDoc->setField('thumbnail', ($logicalUnit['id'] == $doc->toplevelId) ? $doc->thumbnail : $doc->getFileLocation($logicalUnit['thumbnailId']));
+        // There can be only one toplevel unit per UID, independently of backend configuration
+        $solrDoc->setField('toplevel', $logicalUnit['id'] == $doc->toplevelId);
+        $solrDoc->setField('title', $metadata['title'][0], self::$fields['fieldboost']['title']);
+        $solrDoc->setField('volume', $metadata['volume'][0], self::$fields['fieldboost']['volume']);
+        
+        // Verify date formatting
+        $date = strtotime($metadata['date'][0]) ? self::getFormattedDate($metadata['date'][0]) : null;
+        $solrDoc->setField('date', $date);
+
+        // Set other fields in Solr document
+        $solrDoc->setField('record_id', $metadata['record_id'][0]);
+        $solrDoc->setField('purl', $metadata['purl'][0]);
+        $solrDoc->setField('location', $document->getLocation());
+        $solrDoc->setField('urn', $metadata['urn']);
+        $solrDoc->setField('license', $metadata['license']);
+        $solrDoc->setField('terms', $metadata['terms']);
+        $solrDoc->setField('restrictions', $metadata['restrictions']);
+
+        // Set geometry field in Solr document
+        if (!empty($metadata['coordinates'][0])) {
             $coordinates = json_decode($metadata['coordinates'][0]);
             if (is_object($coordinates)) {
                 $solrDoc->setField('geom', json_encode($coordinates->features[0]));
             }
-            $autocomplete = self::processMetadata($document, $metadata, $solrDoc);
-            // Add autocomplete values to index.
-            if (!empty($autocomplete)) {
-                $solrDoc->setField('autocomplete', $autocomplete);
-            }
-            // Add collection information to logical sub-elements if applicable.
-            if (
-                in_array('collection', self::$fields['facets'])
-                && empty($metadata['collection'])
-                && !empty($doc->metadataArray[$doc->toplevelId]['collection'])
-            ) {
-                $solrDoc->setField('collection_faceting', $doc->metadataArray[$doc->toplevelId]['collection']);
-            }
-            try {
-                $updateQuery->addDocument($solrDoc);
-                self::$solr->service->update($updateQuery);
-            } catch (\Exception $e) {
-                self::handleException($e->getMessage());
-                return false;
-            }
         }
-        // Check for child elements...
+
+        // Process autocomplete values
+        $autocomplete = self::processMetadata($document, $metadata, $solrDoc);
+        if (!empty($autocomplete)) {
+            $solrDoc->setField('autocomplete', $autocomplete);
+        }
+
+        // Add collection information to logical sub-elements if applicable.
+        if (in_array('collection', self::$fields['facets']) && empty($metadata['collection']) && !empty($doc->metadataArray[$doc->toplevelId]['collection'])) {
+            $solrDoc->setField('collection_faceting', $doc->metadataArray[$doc->toplevelId]['collection']);
+        }
+
+        try {
+            // Add Solr document to update query and update Solr
+            $updateQuery->addDocument($solrDoc);
+            self::$solr->service->update($updateQuery);
+        } catch (\Exception $e) {
+            self::handleException($e->getMessage());
+            return false;
+        }
+
+        // Recursively process child elements
         if (!empty($logicalUnit['children'])) {
             foreach ($logicalUnit['children'] as $child) {
-                if ($success) {
-                    // ...and process them, too.
-                    $success = self::processLogical($document, $child);
-                } else {
-                    break;
+                if (!self::processLogical($document, $child)) {
+                    return false; // Stop processing if any child fails
                 }
             }
         }
-        return $success;
+
+        return true;
     }
 
     /**

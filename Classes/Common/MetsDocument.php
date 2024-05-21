@@ -320,7 +320,7 @@ final class MetsDocument extends AbstractDocument
             'pagination' => '',
             'type' => isset($attributes['TYPE']) ? (string) $attributes['TYPE'] : '',
             'description' => '',
-            'thumbnailId' => null,
+            'thumbnailId' => '',
             'files' => [],
         ];
 
