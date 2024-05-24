@@ -22,6 +22,11 @@ services:
       - name: console.command
         command: 'kitodo:index'
 
+  Kitodo\Dlf\Command\InitializeCommand:
+    tags:
+      - name: 'console.command'
+        command: 'kitodo:initialize'
+
   Kitodo\Dlf\Command\ReindexCommand:
     tags:
       - name: console.command
