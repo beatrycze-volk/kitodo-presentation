@@ -15,19 +15,22 @@ namespace Kitodo\Dlf\Command;
 use Kitodo\Dlf\Common\AbstractDocument;
 use Kitodo\Dlf\Common\Helper;
 use Kitodo\Dlf\Common\Indexer;
-use Kitodo\Dlf\Domain\Repository\CollectionRepository;
-use Kitodo\Dlf\Domain\Repository\DocumentRepository;
-use Kitodo\Dlf\Domain\Repository\LibraryRepository;
-use Kitodo\Dlf\Domain\Repository\StructureRepository;
 use Kitodo\Dlf\Domain\Model\Collection;
 use Kitodo\Dlf\Domain\Model\Document;
 use Kitodo\Dlf\Domain\Model\Library;
+use Kitodo\Dlf\Domain\Repository\CollectionRepository;
+use Kitodo\Dlf\Domain\Repository\DocumentRepository;
+use Kitodo\Dlf\Domain\Repository\FormatRepository;
+use Kitodo\Dlf\Domain\Repository\LibraryRepository;
+use Kitodo\Dlf\Domain\Repository\MetadataRepository;
+use Kitodo\Dlf\Domain\Repository\SolrCoreRepository;
+use Kitodo\Dlf\Domain\Repository\StructureRepository;
 use Symfony\Component\Console\Command\Command;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\MathUtility;
-use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManager;
 use TYPO3\CMS\Extbase\Configuration\ConfigurationManagerInterface;
 use TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager;
@@ -56,9 +59,27 @@ class BaseCommand extends Command
 
     /**
      * @access protected
+     * @var FormatRepository
+     */
+    protected FormatRepository $formatRepository;
+
+    /**
+     * @access protected
      * @var LibraryRepository
      */
     protected LibraryRepository $libraryRepository;
+
+    /**
+     * @access protected
+     * @var MetadataRepository
+     */
+    protected MetadataRepository $metadataRepository;
+
+    /**
+     * @access protected
+     * @var SolrCoreRepository
+     */
+    protected SolrCoreRepository $solrCoreRepository;
 
     /**
      * @access protected
@@ -97,7 +118,10 @@ class BaseCommand extends Command
     public function __construct(
         CollectionRepository $collectionRepository,
         DocumentRepository $documentRepository,
+        FormatRepository $formatRepository,
         LibraryRepository $libraryRepository,
+        MetadataRepository $metadataRepository,
+        SolrCoreRepository $solrCoreRepository,
         StructureRepository $structureRepository,
         ConfigurationManager $configurationManager,
         PersistenceManager $persistenceManager
@@ -106,7 +130,10 @@ class BaseCommand extends Command
 
         $this->collectionRepository = $collectionRepository;
         $this->documentRepository = $documentRepository;
+        $this->formatRepository = $formatRepository;
         $this->libraryRepository = $libraryRepository;
+        $this->metadataRepository = $metadataRepository;
+        $this->solrCoreRepository = $solrCoreRepository;
         $this->structureRepository = $structureRepository;
         $this->configurationManager = $configurationManager;
         $this->persistenceManager = $persistenceManager;

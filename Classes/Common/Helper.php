@@ -18,6 +18,7 @@ use TYPO3\CMS\Core\Http\Uri;
 use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Messaging\FlashMessageService;
@@ -702,8 +703,8 @@ class Helper
         $context = GeneralUtility::makeInstance(Context::class);
 
         if (
-            \TYPO3_MODE === 'BE'
-            && $context->getPropertyFromAspect('backend.user', 'isAdmin')
+            (\TYPO3_MODE === 'BE'
+            && $context->getPropertyFromAspect('backend.user', 'isAdmin')) || Environment::isCli()
         ) {
             // Instantiate TYPO3 core engine.
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
