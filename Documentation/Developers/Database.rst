@@ -318,66 +318,6 @@ Domain model of the 'Document'.
 
 
 
-tx_dlf_formats: Data Formats
-============================
-
-Extbase domain model: ``Kitodo\Dlf\Domain\Model\Format``
-
-Configured data formats and namespaces like MODS, ALTO, IIIF etc.
-They are referenced by ``tx_dlf_metadataformat.encoded``.
-The formats OAI, METS and XLINK are pre-defined.
-
-Data formats are modeled after XML, though JSON may be used with a pseudo root and namespace.
-
-For more information, see the documentation page on metadata.
-
-.. t3-field-list-table::
-   :header-rows: 1
-
-   - :field:                    Field
-     :description:              Description
-
-   - :field:                    **uid**  *integer*
-     :description:              
-
-   - :field:                    pid  *integer*
-     :description:              
-
-   - :field:                    tstamp  *integer*
-     :description:              
-
-   - :field:                    crdate  *integer*
-     :description:              
-
-   - :field:                    cruser_id  *integer*
-     :description:              
-
-   - :field:                    deleted  *smallint*
-     :description:              
-
-   - :field:                    type  *string*
-     :description:              *Format Name (e.g. in METS)*
-                                
-                                Name of the type that is used to reference it.
-
-   - :field:                    root  *string*
-     :description:              *Root Element*
-                                
-                                The XML root element used by this format.
-
-   - :field:                    namespace  *string*
-     :description:              *Namespace URI*
-                                
-                                The XML namespace URI used by this format.
-
-   - :field:                    class  *string*
-     :description:              *Class Name*
-                                
-                                Fully qualified name of the PHP class that handles the format, or the empty string if no such class is configured.
-
-
-
-
 tx_dlf_libraries: Libraries
 ===========================
 
@@ -606,11 +546,11 @@ tx_dlf_metadataformat: Metadata Format
 
 Extbase domain model: ``Kitodo\Dlf\Domain\Model\MetadataFormat``
 
-This specifies a way how a metadatum (``tx_dlf_metadata``) may be encoded in a specific data format (``tx_dlf_format``).
+This specifies a way how a metadatum (``tx_dlf_metadata``) may be encoded in a specific data format (``Format``) enum.
 
 For instance, the title of a document may be obtained from either the MODS
 title field, or from the TEIHDR caption. This is modeled as two ``tx_dlf_metadaformat``
-that refer to the same ``tx_dlf_metadata`` but different ``tx_dlf_format``.
+that refer to the same ``tx_dlf_metadata`` but different ``Format``.
 
 This contains the xpath expressions on the model 'Metadata'.
 
@@ -650,7 +590,7 @@ This contains the xpath expressions on the model 'Metadata'.
    - :field:                    encoded  *integer*
      :description:              *Encoding*
                                 
-                                UID of the ``tx_dlf_format`` in which this metadata entry is encoded.
+                                Format enum in which this metadata entry is encoded.
 
    - :field:                    xpath  *string*
      :description:              *XPath (relative to //dmdSec/mdWrap/xmlData/root and with namespace) or JSONPath (relative to resource JSON object)*

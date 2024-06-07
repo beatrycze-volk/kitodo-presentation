@@ -14,9 +14,6 @@ return [
     \Kitodo\Dlf\Domain\Model\Document::class => [
         'tableName' => 'tx_dlf_documents',
     ],
-    \Kitodo\Dlf\Domain\Model\Format::class => [
-        'tableName' => 'tx_dlf_formats',
-    ],
     \Kitodo\Dlf\Domain\Model\Library::class => [
         'tableName' => 'tx_dlf_libraries',
     ],

@@ -341,30 +341,6 @@
 				<source>General</source>
 				<target>Allgemein</target>
 			</trans-unit>
-			<trans-unit id="tx_dlf_formats">
-				<source>Data Formats</source>
-				<target>Datenformate</target>
-			</trans-unit>
-			<trans-unit id="tx_dlf_formats.type">
-				<target>Bezeichnung des Formats (z.B. in METS)</target>
-				<source>Format Name (e.g. in METS)</source>
-			</trans-unit>
-			<trans-unit id="tx_dlf_formats.root">
-				<target>Root-Element</target>
-				<source>Root Element</source>
-			</trans-unit>
-			<trans-unit id="tx_dlf_formats.namespace">
-				<source>Namespace URI</source>
-				<target>Namensraum URI</target>
-			</trans-unit>
-			<trans-unit id="tx_dlf_formats.class">
-				<source>Class Name</source>
-				<target>Klassenname</target>
-			</trans-unit>
-			<trans-unit id="tx_dlf_formats.tab1">
-				<source>General</source>
-				<target>Allgemein</target>
-			</trans-unit>
 			<trans-unit id="tx_dlf_solrcores">
 				<source>Solr Cores</source>
 				<target>Solr Kerne</target>

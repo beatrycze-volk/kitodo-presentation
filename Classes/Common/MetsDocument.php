@@ -29,8 +29,6 @@ use Ubl\Iiif\Services\AbstractImageService;
  * @access public
  *
  * @property int $cPid this holds the PID for the configuration
- * @property-read array $formats this holds the configuration for all supported metadata encodings
- * @property bool $formatsLoaded flag with information if the available metadata formats are loaded
  * @property-read bool $hasFulltext flag with information if there are any fulltext files available
  * @property array $lastSearchedPhysicalPage the last searched logical and physical page
  * @property array $logicalUnits this holds the logical units
@@ -504,8 +502,7 @@ final class MetsDocument extends AbstractDocument
         }
         // Associative array used as set of available section types (dmdSec, techMD, ...)
         $hasMetadataSection = [];
-        // Load available metadata formats and metadata sections.
-        $this->loadFormats();
+        // Load available metadata sections.
         $this->magicGetMdSec();
 
         $metadata['type'] = $this->getLogicalUnitType($id);
@@ -729,9 +726,10 @@ final class MetsDocument extends AbstractDocument
     private function extractMetadataIfTypeSupported(string $dmdId, string $mdSectionType, array &$metadata)
     {
         // Is this metadata format supported?
-        if (!empty($this->formats[$this->mdSec[$dmdId]['type']])) {
-            if (!empty($this->formats[$this->mdSec[$dmdId]['type']]['class'])) {
-                $class = $this->formats[$this->mdSec[$dmdId]['type']]['class'];
+        $format = $this->getFormat($this->mdSec[$dmdId]['type']);
+        if (!empty($format)) {
+            $class = $format->class();
+            if (!empty($class)) {
                 // Get the metadata from class.
                 if (class_exists($class)) {
                     $obj = GeneralUtility::makeInstance($class);
@@ -787,20 +785,11 @@ final class MetsDocument extends AbstractDocument
                     'tx_dlf_metadata.uid'
                 )
             )
-            ->innerJoin(
-                'tx_dlf_metadataformat_joins',
-                'tx_dlf_formats',
-                'tx_dlf_formats_joins',
-                $queryBuilder->expr()->eq(
-                    'tx_dlf_formats_joins.uid',
-                    'tx_dlf_metadataformat_joins.encoded'
-                )
-            )
             ->where(
                 $queryBuilder->expr()->eq('tx_dlf_metadata.pid', $cPid),
                 $queryBuilder->expr()->eq('tx_dlf_metadata.l18n_parent', 0),
                 $queryBuilder->expr()->eq('tx_dlf_metadataformat_joins.pid', $cPid),
-                $queryBuilder->expr()->eq('tx_dlf_formats_joins.type', $queryBuilder->createNamedParameter($this->mdSec[$dmdId]['type']))
+                $queryBuilder->expr()->eq('tx_dlf_metadataformat_joins.encoded', $this->getFormat($this->mdSec[$dmdId]['type'])->encoded())
             )
             ->execute();
         // Get all metadata without a format, but with a default value next.
@@ -1000,8 +989,6 @@ final class MetsDocument extends AbstractDocument
     protected function magicGetMdSec(): array
     {
         if (!$this->mdSecLoaded) {
-            $this->loadFormats();
-
             foreach ($this->mets->xpath('./mets:dmdSec') as $dmdSecTag) {
                 $dmdSec = $this->processMdSec($dmdSecTag);
 
@@ -1074,13 +1061,15 @@ final class MetsDocument extends AbstractDocument
         $type = '';
         $mdType = $element->xpath('./mets:mdWrap[not(@MDTYPE="OTHER")]/@MDTYPE');
         $otherMdType = $element->xpath('./mets:mdWrap[@MDTYPE="OTHER"]/@OTHERMDTYPE');
+        $format = $this->getFormat((string) $mdType[0]);
+        $otherFormat = $this->getFormat((string) $otherMdType[0]);
 
-        if (!empty($mdType) && !empty($this->formats[(string) $mdType[0]])) {
+        if (!empty($mdType) && !empty($format)) {
             $type = (string) $mdType[0];
-            $xml = $element->xpath('./mets:mdWrap[@MDTYPE="' . $type . '"]/mets:xmlData/' . strtolower($type) . ':' . $this->formats[$type]['rootElement']);
-        } elseif (!empty($otherMdType) && !empty($this->formats[(string) $otherMdType[0]])) {
+            $xml = $element->xpath('./mets:mdWrap[@MDTYPE="' . $type . '"]/mets:xmlData/' . strtolower($type) . ':' . $format->root());
+        } elseif (!empty($otherMdType) && !empty($otherFormat)) {
             $type = (string) $otherMdType[0];
-            $xml = $element->xpath('./mets:mdWrap[@MDTYPE="OTHER"][@OTHERMDTYPE="' . $type . '"]/mets:xmlData/' . strtolower($type) . ':' . $this->formats[$type]['rootElement']);
+            $xml = $element->xpath('./mets:mdWrap[@MDTYPE="OTHER"][@OTHERMDTYPE="' . $type . '"]/mets:xmlData/' . strtolower($type) . ':' . $otherFormat->root());
         }
 
         if (empty($xml)) {

@@ -38,8 +38,32 @@ return [
             'config' => [
                 'type' => 'select',
                 'renderType' => 'selectSingle',
-                'foreign_table' => 'tx_dlf_formats',
-                'foreign_table_where' => 'ORDER BY tx_dlf_formats.type',
+                'items' => [
+                    [
+                        'label' => 'MODS',
+                        'value' => 1,
+                    ],
+                    [
+                        'label' => 'TEIHDR',
+                        'value' => 2,
+                    ],
+                    [
+                        'label' => 'ALTO',
+                        'value' => 3,
+                    ],
+                    [
+                        'label' => 'IIIF1',
+                        'value' => 4,
+                    ],
+                    [
+                        'label' => 'IIIF2',
+                        'value' => 5,
+                    ],
+                    [
+                        'label' => 'IIIF3',
+                        'value' => 6,
+                    ]
+                ],
                 'size' => 1,
                 'minitems' => 1,
                 'maxitems' => 1,

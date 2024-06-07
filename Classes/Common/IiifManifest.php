@@ -42,8 +42,6 @@ use Ubl\Iiif\Tools\IiifHelper;
  * @access public
  *
  * @property int $cPid this holds the PID for the configuration
- * @property-read array $formats this holds the configuration for all supported metadata encodings
- * @property bool $formatsLoaded flag with information if the available metadata formats are loaded
  * @property-read bool $hasFulltext flag with information if there are any fulltext files available
  * @property array $lastSearchedPhysicalPage the last searched logical and physical page
  * @property array $logicalUnits this holds the logical units
@@ -138,16 +136,14 @@ final class IiifManifest extends AbstractDocument
                 ->select('tx_dlf_metadataformat.xpath AS querypath')
                 ->from('tx_dlf_metadata')
                 ->from('tx_dlf_metadataformat')
-                ->from('tx_dlf_formats')
                 ->where(
                     $queryBuilder->expr()->eq('tx_dlf_metadata.pid', (int) $pid),
                     $queryBuilder->expr()->eq('tx_dlf_metadataformat.pid', (int) $pid),
                     $queryBuilder->expr()->orX(
                         $queryBuilder->expr()->andX(
                             $queryBuilder->expr()->eq('tx_dlf_metadata.uid', 'tx_dlf_metadataformat.parent_id'),
-                            $queryBuilder->expr()->eq('tx_dlf_metadataformat.encoded', 'tx_dlf_formats.uid'),
-                            $queryBuilder->expr()->eq('tx_dlf_metadata.index_name', $queryBuilder->createNamedParameter('record_id')),
-                            $queryBuilder->expr()->eq('tx_dlf_formats.type', $queryBuilder->createNamedParameter($this->getIiifVersion()))
+                            $queryBuilder->expr()->eq('tx_dlf_metadataformat.encoded', $this->getFormat($this->getIiifVersion())->encoded()),
+                            $queryBuilder->expr()->eq('tx_dlf_metadata.index_name', $queryBuilder->createNamedParameter('record_id'))
                         ),
                         $queryBuilder->expr()->eq('tx_dlf_metadata.format', 0)
                     )
@@ -616,15 +612,13 @@ final class IiifManifest extends AbstractDocument
             )
             ->from('tx_dlf_metadata')
             ->from('tx_dlf_metadataformat')
-            ->from('tx_dlf_formats')
             ->where(
-                $queryBuilder->expr()->eq('tx_dlf_metadata.pid', (int) $cPid),
-                $queryBuilder->expr()->eq('tx_dlf_metadataformat.pid', (int) $cPid),
+                $queryBuilder->expr()->eq('tx_dlf_metadata.pid', $cPid),
+                $queryBuilder->expr()->eq('tx_dlf_metadataformat.pid', $cPid),
                 $queryBuilder->expr()->orX(
                     $queryBuilder->expr()->andX(
                         $queryBuilder->expr()->eq('tx_dlf_metadata.uid', 'tx_dlf_metadataformat.parent_id'),
-                        $queryBuilder->expr()->eq('tx_dlf_metadataformat.encoded', 'tx_dlf_formats.uid'),
-                        $queryBuilder->expr()->eq('tx_dlf_formats.type', $queryBuilder->createNamedParameter($this->getIiifVersion()))
+                        $queryBuilder->expr()->eq('tx_dlf_metadataformat.encoded', $this->getFormat($this->getIiifVersion())->encoded())
                     ),
                     $queryBuilder->expr()->eq('tx_dlf_metadata.format', 0)
                 )

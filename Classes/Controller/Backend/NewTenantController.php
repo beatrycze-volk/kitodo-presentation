@@ -14,12 +14,11 @@ namespace Kitodo\Dlf\Controller\Backend;
 use Kitodo\Dlf\Common\Helper;
 use Kitodo\Dlf\Common\Solr\Solr;
 use Kitodo\Dlf\Controller\AbstractController;
-use Kitodo\Dlf\Domain\Model\Format;
 use Kitodo\Dlf\Domain\Model\SolrCore;
-use Kitodo\Dlf\Domain\Repository\FormatRepository;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
 use Kitodo\Dlf\Domain\Repository\SolrCoreRepository;
 use Kitodo\Dlf\Domain\Repository\StructureRepository;
+use Kitodo\Dlf\Format\Format;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Backend\View\BackendTemplateView;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
@@ -70,24 +69,6 @@ class NewTenantController extends AbstractController
      * @var string Backend Template Container
      */
     protected $defaultViewObjectName = BackendTemplateView::class;
-
-    /**
-     * @access protected
-     * @var FormatRepository
-     */
-    protected FormatRepository $formatRepository;
-
-    /**
-     * @access public
-     *
-     * @param FormatRepository $formatRepository
-     *
-     * @return void
-     */
-    public function injectFormatRepository(FormatRepository $formatRepository): void
-    {
-        $this->formatRepository = $formatRepository;
-    }
 
     /**
      * @access protected
@@ -168,49 +149,6 @@ class NewTenantController extends AbstractController
         $this->siteLanguages = $site->getLanguages();
     }
 
-
-    /**
-     * Action adding formats records
-     *
-     * @access public
-     *
-     * @return void
-     */
-    public function addFormatAction(): void
-    {
-        // Include formats definition file.
-        $formatsDefaults = include(ExtensionManagementUtility::extPath('dlf') . 'Resources/Private/Data/FormatDefaults.php');
-
-        $frameworkConfiguration = $this->configurationManager->getConfiguration($this->configurationManager::CONFIGURATION_TYPE_FRAMEWORK);
-        // tx_dlf_formats are stored on PID = 0
-        $frameworkConfiguration['persistence']['storagePid'] = 0;
-        $this->configurationManager->setConfiguration($frameworkConfiguration);
-
-        $doPersist = false;
-
-        foreach ($formatsDefaults as $type => $values) {
-            // if default format record is not found, add it to the repository
-            if ($this->formatRepository->findOneByType($type) === null) {
-                $newRecord = GeneralUtility::makeInstance(Format::class);
-                $newRecord->setType($type);
-                $newRecord->setRoot($values['root']);
-                $newRecord->setNamespace($values['namespace']);
-                $newRecord->setClass($values['class']);
-                $this->formatRepository->add($newRecord);
-
-                $doPersist = true;
-            }
-        }
-
-        // We must persist here, if we changed anything.
-        if ($doPersist === true) {
-            $persistenceManager = GeneralUtility::makeInstance(PersistenceManager::class);
-            $persistenceManager->persistAll();
-        }
-
-        $this->forward('index');
-    }
-
     /**
      * Action adding metadata records
      *
@@ -226,13 +164,6 @@ class NewTenantController extends AbstractController
         // load language file in own array
         $metadataLabels = $this->languageFactory->getParsedData('EXT:dlf/Resources/Private/Language/locallang_metadata.xlf', $this->siteLanguages[0]->getTypo3Language());
 
-        $insertedFormats = $this->formatRepository->findAll();
-
-        $availableFormats = [];
-        foreach ($insertedFormats as $insertedFormat) {
-            $availableFormats[$insertedFormat->getRoot()] = $insertedFormat->getUid();
-        }
-
         $defaultWrap = BackendUtility::getTcaFieldConfiguration('tx_dlf_metadata', 'wrap')['default'];
 
         $data = [];
@@ -240,7 +171,7 @@ class NewTenantController extends AbstractController
             $formatIds = [];
 
             foreach ($values['format'] as $format) {
-                $format['encoded'] = $availableFormats[$format['format_root']];
+                $format['encoded'] = Format::from(strtolower($format['format_root']))->encoded();
                 unset($format['format_root']);
                 $formatIds[] = uniqid('NEW');
                 $data['tx_dlf_metadataformat'][end($formatIds)] = $format;
@@ -425,10 +356,6 @@ class NewTenantController extends AbstractController
         if ($this->pageInfo['doktype'] != 254) {
             $this->forward('error');
         }
-
-        $formatsDefaults = include(ExtensionManagementUtility::extPath('dlf') . 'Resources/Private/Data/FormatDefaults.php');
-        $recordInfos['formats']['numCurrent'] = $this->formatRepository->countAll();
-        $recordInfos['formats']['numDefault'] = count($formatsDefaults);
 
         $structuresDefaults = include(ExtensionManagementUtility::extPath('dlf') . 'Resources/Private/Data/StructureDefaults.php');
         $recordInfos['structures']['numCurrent'] = $this->structureRepository->countByPid($this->pid);

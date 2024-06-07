@@ -12,6 +12,7 @@
 
 namespace Kitodo\Dlf\Common;
 
+use Kitodo\Dlf\Format\Format;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -31,8 +32,6 @@ use Ubl\Iiif\Tools\IiifHelper;
  * @abstract
  *
  * @property int $cPid this holds the PID for the configuration
- * @property-read array $formats this holds the configuration for all supported metadata encodings
- * @property bool $formatsLoaded flag with information if the available metadata formats are loaded
  * @property-read bool $hasFulltext flag with information if there are any fulltext files available
  * @property array $lastSearchedPhysicalPage the last searched logical and physical page
  * @property array $logicalUnits this holds the logical units
@@ -83,35 +82,6 @@ abstract class AbstractDocument
      * @var array Additional information about files (e.g., ADMID), indexed by ID.
      */
     protected array $fileInfos = [];
-
-    /**
-     * @access protected
-     * @var array This holds the configuration for all supported metadata encodings
-     *
-     * @see loadFormats()
-     */
-    protected array $formats = [
-        'OAI' => [
-            'rootElement' => 'OAI-PMH',
-            'namespaceURI' => 'http://www.openarchives.org/OAI/2.0/',
-        ],
-        'METS' => [
-            'rootElement' => 'mets',
-            'namespaceURI' => 'http://www.loc.gov/METS/',
-        ],
-        'XLINK' => [
-            'rootElement' => 'xlink',
-            'namespaceURI' => 'http://www.w3.org/1999/xlink',
-        ]
-    ];
-
-    /**
-     * @access protected
-     * @var bool Are the available metadata formats loaded?
-     *
-     * @see $formats
-     */
-    protected bool $formatsLoaded = false;
 
     /**
      * Are there any fulltext files available? This also includes IIIF text annotations
@@ -635,6 +605,16 @@ abstract class AbstractDocument
         return 1;
     }
 
+    protected function getFormat(string $formatRoot): ?Format
+    {
+        foreach (Format::cases() as $format) {
+            if ($format->from(strtolower($formatRoot))) {
+                return $format;
+            }
+        }
+        return null;
+    }
+
     /**
      * This extracts the OCR full text for a physical structure node / IIIF Manifest / Canvas from an
      * XML full text representation (currently only ALTO). For IIIF manifests, ALTO documents have
@@ -648,8 +628,6 @@ abstract class AbstractDocument
     protected function getFullTextFromXml(string $id): string
     {
         $fullText = '';
-        // Load available text formats, ...
-        $this->loadFormats();
         // ... physical structure ...
         $this->magicGetPhysicalStructure();
         // ... and extension configuration.
@@ -676,9 +654,10 @@ abstract class AbstractDocument
         }
         // Is this text format supported?
         // This part actually differs from previous version of indexed OCR
-        if (!empty($fileContent) && !empty($this->formats[$textFormat])) {
+        $format = $this->getFormat($textFormat);
+        if (!empty($fileContent) && !empty($format)) {
             $textMiniOcr = '';
-            if (!empty($this->formats[$textFormat]['class'])) {
+            if (!empty($format->class())) {
                 $textMiniOcr = $this->getRawTextFromClass($id, $fileContent, $textFormat);
             }
             $fullText = $textMiniOcr;
@@ -702,7 +681,7 @@ abstract class AbstractDocument
     private function getRawTextFromClass($id, $fileContent, $textFormat): string
     {
         $textMiniOcr = '';
-        $class = $this->formats[$textFormat]['class'];
+        $class = $this->getFormat($textFormat)->class();
         // Get the raw text from class.
         if (class_exists($class)) {
             $obj = GeneralUtility::makeInstance($class);
@@ -889,45 +868,6 @@ abstract class AbstractDocument
     }
 
     /**
-     * Register all available data formats
-     *
-     * @access protected
-     *
-     * @return void
-     */
-    protected function loadFormats(): void
-    {
-        if (!$this->formatsLoaded) {
-            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)
-                ->getQueryBuilderForTable('tx_dlf_formats');
-
-            // Get available data formats from database.
-            $result = $queryBuilder
-                ->select(
-                    'tx_dlf_formats.type AS type',
-                    'tx_dlf_formats.root AS root',
-                    'tx_dlf_formats.namespace AS namespace',
-                    'tx_dlf_formats.class AS class'
-                )
-                ->from('tx_dlf_formats')
-                ->where(
-                    $queryBuilder->expr()->eq('tx_dlf_formats.pid', 0)
-                )
-                ->execute();
-
-            while ($resArray = $result->fetchAssociative()) {
-                // Update format registry.
-                $this->formats[$resArray['type']] = [
-                    'rootElement' => $resArray['root'],
-                    'namespaceURI' => $resArray['namespace'],
-                    'class' => $resArray['class']
-                ];
-            }
-            $this->formatsLoaded = true;
-        }
-    }
-
-    /**
      * Register all available namespaces for a \SimpleXMLElement object
      *
      * @access public
@@ -939,7 +879,6 @@ abstract class AbstractDocument
     public function registerNamespaces(&$obj): void
     {
         // TODO Check usage. XML specific method does not seem to be used anywhere outside this class within the project, but it is public and may be used by extensions.
-        $this->loadFormats();
         // Do we have a \SimpleXMLElement or \DOMXPath object?
         if ($obj instanceof \SimpleXMLElement) {
             $method = 'registerXPathNamespace';
@@ -950,8 +889,8 @@ abstract class AbstractDocument
             return;
         }
         // Register metadata format's namespaces.
-        foreach ($this->formats as $enc => $conf) {
-            $obj->$method(strtolower($enc), $conf['namespaceURI']);
+        foreach (Format::cases() as $enc => $format) {
+            $obj->$method($enc, $format->namespace());
         }
     }
 

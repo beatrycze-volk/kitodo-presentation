@@ -141,25 +141,6 @@ CREATE TABLE tx_dlf_metadataformat (
 );
 
 --
--- Table structure for table 'tx_dlf_formats'
---
-CREATE TABLE tx_dlf_formats (
-    uid int(11) NOT NULL auto_increment,
-    pid int(11) DEFAULT '0' NOT NULL,
-    tstamp int(11) DEFAULT '0' NOT NULL,
-    crdate int(11) DEFAULT '0' NOT NULL,
-    cruser_id int(11) DEFAULT '0' NOT NULL,
-    deleted smallint(6) DEFAULT '0' NOT NULL,
-    type varchar(255) DEFAULT '' NOT NULL,
-    root varchar(255) DEFAULT '' NOT NULL,
-    namespace varchar(255) DEFAULT '' NOT NULL,
-    class varchar(255) DEFAULT '' NOT NULL,
-
-    PRIMARY KEY (uid),
-    KEY parent (pid)
-);
-
---
 -- Table structure for table 'tx_dlf_solrcores'
 --
 CREATE TABLE tx_dlf_solrcores (
