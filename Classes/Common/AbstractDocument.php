@@ -36,12 +36,10 @@ use Ubl\Iiif\Tools\IiifHelper;
  * @property array $lastSearchedPhysicalPage the last searched logical and physical page
  * @property array $logicalUnits this holds the logical units
  * @property-read array $metadataArray this holds the documents' parsed metadata array
- * @property bool $metadataArrayLoaded flag with information if the metadata array is loaded
  * @property-read int $numPages the holds the total number of pages
  * @property-read int $parentId this holds the UID of the parent document or zero if not multi-volumed
  * @property-read array $physicalStructure this holds the physical structure
  * @property-read array $physicalStructureInfo this holds the physical structure metadata
- * @property bool $physicalStructureLoaded flag with information if the physical structure is loaded
  * @property-read int $pid this holds the PID of the document or zero if not in database
  * @property array $rawTextArray this holds the documents' raw text pages with their corresponding structMap//div's ID (METS) or Range / Manifest / Sequence ID (IIIF) as array key
  * @property-read bool $ready Is the document instantiated successfully?
@@ -50,7 +48,6 @@ use Ubl\Iiif\Tools\IiifHelper;
  * @property-read array $smLinks this holds the smLinks between logical and physical structMap
  * @property bool $smLinksLoaded flag with information if the smLinks are loaded
  * @property-read array $tableOfContents this holds the logical structure
- * @property bool $tableOfContentsLoaded flag with information if the table of contents is loaded
  * @property-read string $thumbnail this holds the document's thumbnail location
  * @property bool $thumbnailLoaded flag with information if the thumbnail is loaded
  * @property-read string $toplevelId this holds the toplevel structure's "@ID" (METS) or the manifest's "@id" (IIIF)
@@ -145,14 +142,6 @@ abstract class AbstractDocument
 
     /**
      * @access protected
-     * @var bool Is the metadata array loaded?
-     *
-     * @see $metadataArray
-     */
-    protected bool $metadataArrayLoaded = false;
-
-    /**
-     * @access protected
      * @var int The holds the total number of pages
      */
     protected int $numPages = 0;
@@ -174,14 +163,6 @@ abstract class AbstractDocument
      * @var array This holds the physical structure metadata
      */
     protected array $physicalStructureInfo = [];
-
-    /**
-     * @access protected
-     * @var bool Is the physical structure loaded?
-     *
-     * @see $physicalStructure
-     */
-    protected bool $physicalStructureLoaded = false;
 
     /**
      * @access protected
@@ -218,14 +199,6 @@ abstract class AbstractDocument
 
     /**
      * @access protected
-     * @var bool Is the root id loaded?
-     *
-     * @see $rootId
-     */
-    protected bool $rootIdLoaded = false;
-
-    /**
-     * @access protected
      * @var array This holds the smLinks between logical and physical structMap
      */
     protected array $smLinks = ['l2p' => [], 'p2l' => []];
@@ -245,14 +218,6 @@ abstract class AbstractDocument
      * @var array
      */
     protected array $tableOfContents = [];
-
-    /**
-     * @access protected
-     * @var bool Is the table of contents loaded?
-     *
-     * @see $tableOfContents
-     */
-    protected bool $tableOfContentsLoaded = false;
 
     /**
      * @access protected
@@ -985,12 +950,11 @@ abstract class AbstractDocument
             return [];
         }
         if (
-            !$this->metadataArrayLoaded
+            empty($this->metadataArray)
             || $this->metadataArray[0] != $cPid
         ) {
             $this->prepareMetadataArray($cPid);
             $this->metadataArray[0] = $cPid;
-            $this->metadataArrayLoaded = true;
         }
         return $this->metadataArray;
     }
@@ -1030,7 +994,7 @@ abstract class AbstractDocument
     protected function magicGetPhysicalStructureInfo(): array
     {
         // Is there no physical structure array yet?
-        if (!$this->physicalStructureLoaded) {
+        if (empty($this->physicalStructureInfo)) {
             // Build physical structure array.
             $this->magicGetPhysicalStructure();
         }
@@ -1082,14 +1046,11 @@ abstract class AbstractDocument
      */
     protected function magicGetRootId(): int
     {
-        if (!$this->rootIdLoaded) {
-            if ($this->parentId) {
-                // TODO: Parameter $location of static method AbstractDocument::getInstance() expects string, int<min, -1>|int<1, max> given.
-                // @phpstan-ignore-next-line
-                $parent = self::getInstance($this->parentId, ['storagePid' => $this->pid]);
-                $this->rootId = $parent->rootId;
-            }
-            $this->rootIdLoaded = true;
+        if ($this->parentId > 0 && $this->rootId == 0) {
+            // TODO: Parameter $location of static method AbstractDocument::getInstance() expects string, int<min, -1>|int<1, max> given.
+            // @phpstan-ignore-next-line
+            $parent = self::getInstance($this->parentId, ['storagePid' => $this->pid]);
+            $this->rootId = $parent->rootId;
         }
         return $this->rootId;
     }
@@ -1104,10 +1065,9 @@ abstract class AbstractDocument
     protected function magicGetTableOfContents(): array
     {
         // Is there no logical structure array yet?
-        if (!$this->tableOfContentsLoaded) {
+        if (empty($this->tableOfContents)) {
             // Get all logical structures.
             $this->getLogicalStructure('', true);
-            $this->tableOfContentsLoaded = true;
         }
         return $this->tableOfContents;
     }

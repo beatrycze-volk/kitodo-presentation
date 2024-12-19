@@ -23,7 +23,6 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use Ubl\Iiif\Tools\IiifHelper;
 use Ubl\Iiif\Services\AbstractImageService;
 
 /**
@@ -41,7 +40,6 @@ use Ubl\Iiif\Services\AbstractImageService;
  * @property array $lastSearchedPhysicalPage the last searched logical and physical page
  * @property array $logicalUnits this holds the logical units
  * @property-read array $metadataArray this holds the documents' parsed metadata array
- * @property bool $metadataArrayLoaded flag with information if the metadata array is loaded
  * @property-read int $numPages the holds the total number of pages
  * @property-read int $numMeasures This holds the total number of measures
  * @property-read int $parentId this holds the UID of the parent document or zero if not multi-volumed
@@ -49,7 +47,6 @@ use Ubl\Iiif\Services\AbstractImageService;
  * @property-read array $physicalStructureInfo this holds the physical structure metadata
  * @property-read array $musicalStructure This holds the musical structure
  * @property-read array $musicalStructureInfo This holds the musical structure metadata
- * @property bool $physicalStructureLoaded flag with information if the physical structure is loaded
  * @property-read int $pid this holds the PID of the document or zero if not in database
  * @property array $rawTextArray this holds the documents' raw text pages with their corresponding structMap//div's ID (METS) or Range / Manifest / Sequence ID (IIIF) as array key
  * @property-read bool $ready Is the document instantiated successfully?
@@ -58,16 +55,13 @@ use Ubl\Iiif\Services\AbstractImageService;
  * @property-read array $smLinks this holds the smLinks between logical and physical structMap
  * @property bool $smLinksLoaded flag with information if the smLinks are loaded
  * @property-read array $tableOfContents this holds the logical structure
- * @property bool $tableOfContentsLoaded flag with information if the table of contents is loaded
  * @property-read string $thumbnail this holds the document's thumbnail location
  * @property bool $thumbnailLoaded flag with information if the thumbnail is loaded
  * @property-read string $toplevelId this holds the toplevel structure's "@ID" (METS) or the manifest's "@id" (IIIF)
  * @property SimpleXMLElement $xml this holds the whole XML file as SimpleXMLElement object
  * @property-read array $mdSec associative array of METS metadata sections indexed by their IDs.
- * @property bool $mdSecLoaded flag with information if the array of METS metadata sections is loaded
  * @property-read array $dmdSec subset of `$mdSec` storing only the dmdSec entries; kept for compatibility.
  * @property-read array $fileGrps this holds the file ID -> USE concordance
- * @property bool $fileGrpsLoaded flag with information if file groups array is loaded
  * @property-read array $fileInfos additional information about files (e.g., ADMID), indexed by ID.
  * @property-read SimpleXMLElement $mets this holds the XML file's METS part as SimpleXMLElement object
  * @property-read string $parentHref URL of the parent document (determined via mptr element), or empty string if none is available
@@ -105,14 +99,6 @@ final class MetsDocument extends AbstractDocument
 
     /**
      * @access protected
-     * @var bool Are the METS file's metadata sections loaded?
-     *
-     * @see MetsDocument::$mdSec
-     */
-    protected bool $mdSecLoaded = false;
-
-    /**
-     * @access protected
      * @var array Subset of $mdSec storing only the dmdSec entries; kept for compatibility.
      */
     protected array $dmdSec = [];
@@ -124,14 +110,6 @@ final class MetsDocument extends AbstractDocument
      * @see magicGetFileGrps()
      */
     protected array $fileGrps = [];
-
-    /**
-     * @access protected
-     * @var bool Are the image file groups loaded?
-     *
-     * @see $fileGrps
-     */
-    protected bool $fileGrpsLoaded = false;
 
     /**
      * @access protected
@@ -166,15 +144,6 @@ final class MetsDocument extends AbstractDocument
      * @access protected
      */
     protected array $musicalStructureInfo = [];
-
-    /**
-     * Is the musical structure loaded?
-     * @see $musicalStructure
-     *
-     * @var bool
-     * @access protected
-     */
-    protected bool $musicalStructureLoaded = false;
 
     /**
      * The holds the total number of measures
@@ -1201,10 +1170,7 @@ final class MetsDocument extends AbstractDocument
      */
     protected function ensureHasFulltextIsSet(): void
     {
-        // Are the fileGrps already loaded?
-        if (!$this->fileGrpsLoaded) {
-            $this->magicGetFileGrps();
-        }
+        $this->magicGetFileGrps();
     }
 
     /**
@@ -1237,7 +1203,7 @@ final class MetsDocument extends AbstractDocument
      */
     protected function magicGetMdSec(): array
     {
-        if (!$this->mdSecLoaded) {
+        if (empty($this->mdSec)) {
             $this->loadFormats();
 
             foreach ($this->mets->xpath('./mets:dmdSec') as $dmdSecTag) {
@@ -1272,8 +1238,6 @@ final class MetsDocument extends AbstractDocument
                     $this->amdSecChildIds[$amdSecId] = $childIds;
                 }
             }
-
-            $this->mdSecLoaded = true;
         }
         return $this->mdSec;
     }
@@ -1344,7 +1308,7 @@ final class MetsDocument extends AbstractDocument
      */
     protected function magicGetFileGrps(): array
     {
-        if (!$this->fileGrpsLoaded) {
+        if (empty($this->fileGrps)) {
             foreach (array_values($this->getUseGroups()) as $useGroups) {
                 foreach ($useGroups as $useGroup) {
                     // Perform XPath query for each configured USE attribute
@@ -1372,7 +1336,6 @@ final class MetsDocument extends AbstractDocument
             ) {
                 $this->hasFulltext = true;
             }
-            $this->fileGrpsLoaded = true;
         }
         return $this->fileGrps;
     }
@@ -1410,7 +1373,7 @@ final class MetsDocument extends AbstractDocument
     protected function magicGetPhysicalStructure(): array
     {
         // Is there no physical structure array yet?
-        if (!$this->physicalStructureLoaded) {
+        if (empty($this->physicalStructure)) {
             // Does the document have a structMap node of type "PHYSICAL"?
             $elementNodes = $this->mets->xpath('./mets:structMap[@TYPE="PHYSICAL"]/mets:div[@TYPE="physSequence"]/mets:div');
             if (!empty($elementNodes)) {
@@ -1433,8 +1396,6 @@ final class MetsDocument extends AbstractDocument
 
                 $this->physicalStructure = $this->getPhysicalElements($elementNodes, $fileUse);
             }
-            $this->physicalStructureLoaded = true;
-
         }
 
         return $this->physicalStructure;
@@ -1740,7 +1701,7 @@ final class MetsDocument extends AbstractDocument
     protected function magicGetMusicalStructure(): array
     {
         // Is there no musical structure array yet?
-        if (!$this->musicalStructureLoaded) {
+        if (empty($this->musicalStructure)) {
             $this->numMeasures = 0;
             // Does the document have a structMap node of type "MUSICAL"?
             $elementNodes = $this->mets->xpath('./mets:structMap[@TYPE="MUSICAL"]/mets:div[@TYPE="measures"]/mets:div');
@@ -1841,7 +1802,6 @@ final class MetsDocument extends AbstractDocument
                 }
 
             }
-            $this->musicalStructureLoaded = true;
         }
 
         return $this->musicalStructure;
@@ -1857,7 +1817,7 @@ final class MetsDocument extends AbstractDocument
     protected function magicGetMusicalStructureInfo(): array
     {
         // Is there no musical structure array yet?
-        if (!$this->musicalStructureLoaded) {
+        if (empty($this->musicalStructureInfo)) {
             // Build musical structure array.
             $this->magicGetMusicalStructure();
         }
