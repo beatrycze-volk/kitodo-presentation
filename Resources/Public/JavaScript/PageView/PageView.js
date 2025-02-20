@@ -576,18 +576,22 @@ dlfViewer.prototype.init = function(controlNames) {
 
             // Position image according to user preferences
             var lonCk = dlfUtils.getCookie("tx-dlf-pageview-centerLon"),
-              latCk = dlfUtils.getCookie("tx-dlf-pageview-centerLat"),
-              zoomCk = dlfUtils.getCookie("tx-dlf-pageview-zoomLevel");
-            if (!dlfUtils.isNullEmptyUndefinedOrNoNumber(lonCk) && !dlfUtils.isNullEmptyUndefinedOrNoNumber(latCk) && !dlfUtils.isNullEmptyUndefinedOrNoNumber(zoomCk)) {
+                latCk = dlfUtils.getCookie("tx-dlf-pageview-centerLat"),
+                rotationCk = dlfUtils.getCookie("tx-dlf-pageview-rotation")
+                zoomCk = dlfUtils.getCookie("tx-dlf-pageview-zoomLevel");
+
+            if (!dlfUtils.isNullEmptyUndefinedOrNoNumber(lonCk) && !dlfUtils.isNullEmptyUndefinedOrNoNumber(latCk) && !dlfUtils.isNullEmptyUndefinedOrNoNumber(rotationCk) && !dlfUtils.isNullEmptyUndefinedOrNoNumber(zoomCk)) {
                 var lon = Number(lonCk),
-                  lat = Number(latCk),
-                  zoom = Number(zoomCk);
+                    lat = Number(latCk),
+                    rotation = Number(rotationCk)
+                    zoom = Number(zoomCk);
 
                 // make sure, zoom center is on viewport
                 var center = this.map.getView().getCenter();
                 if ((lon < (2.2 * center[0])) && (lat < (-0.2 * center[1])) && (lat > (2.2 * center[1]))) {
                     this.map.zoomTo([lon, lat], zoom);
                 }
+                this.map.rotateTo(rotation);
             }
 
             this.addCustomControls();
@@ -607,10 +611,12 @@ dlfViewer.prototype.init = function(controlNames) {
                 }
 
                 var zoom = this.map.getZoom() !== undefined ? this.map.getZoom() : '',
+                    rotation = this.map.getRotation() !== undefined ? this.map.getRotation() : ''
                     center = this.map.getView().getCenter() !== undefined ? this.map.getView().getCenter() : ['', ''];
 
                 // save actual map view parameters to cookie
                 dlfUtils.setCookie('tx-dlf-pageview-zoomLevel', zoom, "lax");
+                dlfUtils.setCookie('tx-dlf-pageview-rotation', rotation, "lax");
                 dlfUtils.setCookie('tx-dlf-pageview-centerLon', center[0], "lax");
                 dlfUtils.setCookie('tx-dlf-pageview-centerLat', center[1], "lax");
             }, this));
