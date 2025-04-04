@@ -67,12 +67,6 @@ class Metadata extends AbstractEntity
 
     /**
      * @access protected
-     * @var string
-     */
-    protected $wrap;
-
-    /**
-     * @access protected
      * @var int
      */
     protected $indexTokenized;
@@ -257,22 +251,6 @@ class Metadata extends AbstractEntity
     public function setDefaultValue(string $defaultValue): void
     {
         $this->defaultValue = $defaultValue;
-    }
-
-    /**
-     * @return string
-     */
-    public function getWrap(): string
-    {
-        return $this->wrap;
-    }
-
-    /**
-     * @param string $wrap
-     */
-    public function setWrap(string $wrap): void
-    {
-        $this->wrap = $wrap;
     }
 
     /**

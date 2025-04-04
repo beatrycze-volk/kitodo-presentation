@@ -261,10 +261,6 @@
 				<source>Default Value</source>
 				<target>Standardwert</target>
 			</trans-unit>
-			<trans-unit id="tx_dlf_metadata.wrap">
-				<target>TypoScript-Wrap</target>
-				<source>TypoScript-Wrap</source>
-			</trans-unit>
 			<trans-unit id="tx_dlf_metadata.index_tokenized">
 				<source>Tokenize in Search Index?</source>
 				<target>Im Suchid in Tokens zerlegen?</target>

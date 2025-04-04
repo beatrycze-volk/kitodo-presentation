@@ -129,23 +129,6 @@ return [
                 'default' => '',
             ],
         ],
-        'wrap' => [
-            'exclude' => 1,
-            'label' => 'LLL:EXT:dlf/Resources/Private/Language/locallang_labels.xlf:tx_dlf_metadata.wrap',
-            'config' => [
-                'behaviour' => [
-                    'allowLanguageSynchronization' => true
-                ],
-                'type' => 'text',
-                'cols' => 48,
-                'rows' => 20,
-                'wrap' => 'off',
-                'eval' => 'trim',
-                'default' => "key.wrap = <dt>|</dt>\nvalue.required = 1\nvalue.wrap = <dd>|</dd>",
-                'fixedFont' => true,
-                'enableTabulator' => true
-            ],
-        ],
         'index_tokenized' => [
             'exclude' => 1,
             'l10n_mode' => 'exclude',

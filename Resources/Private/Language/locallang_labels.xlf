@@ -197,9 +197,6 @@
 			<trans-unit id="tx_dlf_metadata.default_value">
 				<source>Default Value</source>
 			</trans-unit>
-			<trans-unit id="tx_dlf_metadata.wrap">
-				<source>TypoScript-Wrap</source>
-			</trans-unit>
 			<trans-unit id="tx_dlf_metadata.index_tokenized">
 				<source>Tokenize in Search Index?</source>
 			</trans-unit>
