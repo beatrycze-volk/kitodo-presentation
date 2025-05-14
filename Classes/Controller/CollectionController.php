@@ -68,9 +68,9 @@ class CollectionController extends AbstractController
 
     /**
      * @access protected
-     * @var array The current search parameter
+     * @var array of the current search parameters
      */
-    protected $searchParams = [];
+    protected $search = [];
 
     /**
      * Show a list of collections
@@ -102,7 +102,7 @@ class CollectionController extends AbstractController
             if (count($collections) == 1 && is_array($collections)) {
                 $this->forward('show', null, null, ['collection' => array_pop($collections)]);
             } else {
-                $searchParams = $this->getParametersSafely('searchParameter');
+                $searchParams = $this->getParametersSafely('search');
                 $collection = $this->collectionRepository->findByUid($searchParams['collection']);
                 $this->forward('show', null, null, ['collection' => $collection]);
             }
@@ -135,15 +135,15 @@ class CollectionController extends AbstractController
             return;
         }
 
-        $this->searchParams = $this->getParametersSafely('searchParameter');
+        $this->search = $this->getParametersSafely('search');
         $searchRequestData = GeneralUtility::_GPmerged('tx_dlf_search');
 
-        if (isset($searchRequestData['searchParameter']) && is_array($searchRequestData['searchParameter'])) {
-            $this->searchParams = array_merge($this->searchParams ?: [], $searchRequestData['searchParameter']);
-            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $this->searchParams);
+        if (isset($searchRequestData['search']) && is_array($searchRequestData['search'])) {
+            $this->search = array_merge($this->search ?: [], $searchRequestData['search']);
+            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $this->search);
         }
 
-        if (!isset($this->searchParams['collection']) && !isset($collection)) {
+        if (!isset($this->search['collection']) && !isset($collection)) {
             $this->logger->warning('Collection is not set.');
             return;
         }
@@ -152,9 +152,9 @@ class CollectionController extends AbstractController
         $currentPage = $this->requestData['page'] ?? 1;
 
         if (!isset($collection)) {
-            $collection = $this->collectionRepository->findByUid($this->searchParams['collection']);
+            $collection = $this->collectionRepository->findByUid($this->search['collection']);
         } else {
-            $this->searchParams['collection'] = $collection->getUid();
+            $this->search['collection'] = $collection->getUid();
         }
 
         // If a targetPid is given, the results will be shown by Collection on the target page.
@@ -176,7 +176,7 @@ class CollectionController extends AbstractController
         // get all sortable metadata records
         $sortableMetadata = $this->metadataRepository->findByIsSortable(true);
 
-        $solrResults = $this->documentRepository->findSolrByCollection($collection, $this->settings, $this->searchParams, $listedMetadata);
+        $solrResults = $this->documentRepository->findSolrByCollection($collection, $this->settings, $this->search, $listedMetadata);
 
         $itemsPerPage = $this->settings['list']['paginate']['itemsPerPage'] ?? 25;
 
@@ -191,7 +191,7 @@ class CollectionController extends AbstractController
         $this->view->assign('countResults', $solrResults->getNumFound());
         $this->view->assign('collection', $collection);
         $this->view->assign('page', $currentPage);
-        $this->view->assign('lastSearch', $this->searchParams);
+        $this->view->assign('lastSearch', $this->search);
         $this->view->assign('sortableMetadata', $sortableMetadata);
         $this->view->assign('listedMetadata', $listedMetadata);
     }
@@ -206,15 +206,15 @@ class CollectionController extends AbstractController
     public function showSortedAction(): void
     {
         // if search was triggered, get search parameters from POST variables
-        $searchParams = $this->getParametersSafely('searchParameter');
+        $search = $this->getParametersSafely('search');
 
         $collection = null;
-        if ($searchParams['collection'] && MathUtility::canBeInterpretedAsInteger($searchParams['collection'])) {
-            $collection = $this->collectionRepository->findByUid($searchParams['collection']);
+        if ($search['collection'] && MathUtility::canBeInterpretedAsInteger($search['collection'])) {
+            $collection = $this->collectionRepository->findByUid($search['collection']);
         }
 
         // output is done by show action
-        $this->forward('show', null, null, ['collection' => $collection, 'searchParams' => $searchParams]);
+        $this->forward('show', null, null, ['collection' => $collection, 'search' => $search]);
 
     }
 

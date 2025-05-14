@@ -71,9 +71,9 @@ class SearchController extends AbstractController
 
     /**
      * @access protected
-     * @var array The current search parameter
+     * @var array of the current search parameters
      */
-    protected ?array $searchParams;
+    protected ?array $search;
 
     /**
      * Search Action
@@ -85,10 +85,10 @@ class SearchController extends AbstractController
     public function searchAction(): void
     {
         // if search was triggered, get search parameters from POST variables
-        $this->searchParams = $this->getParametersSafely('searchParameter');
+        $this->search = $this->getParametersSafely('search');
 
         // output is done by main action
-        $this->forward('main', null, null, ['searchParameter' => $this->searchParams]);
+        $this->forward('main', null, null, ['search' => $this->search]);
     }
 
     /**
@@ -114,16 +114,16 @@ class SearchController extends AbstractController
 
         $this->enableSuggester();
 
-        $this->searchParams = $this->getParametersSafely('searchParameter');
+        $this->search = $this->getParametersSafely('search');
 
-        if (empty($this->searchParams)) {
+        if (empty($this->search)) {
             $this->processEmptySearchParams();
             return;
         }
 
         $this->sanitizeDates();
 
-        if (is_array($this->searchParams) && !empty($this->searchParams)) {
+        if (is_array($this->search) && !empty($this->search)) {
             $this->processNonemptySearchParams();
         }
 
@@ -180,7 +180,7 @@ class SearchController extends AbstractController
         $fields = Solr::getFields();
 
         // Set search query.
-        $searchParams = $this->searchParams;
+        $searchParams = $this->search;
         if (
             (!empty($searchParams['fulltext']))
             || preg_match('/' . $fields['fulltext'] . ':\((.*)\)/', trim($searchParams['query']), $matches)
@@ -204,9 +204,9 @@ class SearchController extends AbstractController
         }
 
         // add filter query for date search
-        if (!empty($this->searchParams['dateFrom']) && !empty($this->searchParams['dateTo'])) {
+        if (!empty($this->search['dateFrom']) && !empty($this->search['dateTo'])) {
             // combine dateFrom and dateTo into filterquery as range search
-            $search['params']['filterquery'][]['query'] = '{!join from=' . $fields['uid'] . ' to=' . $fields['uid'] . '}' . $fields['date'] . ':[' . $this->searchParams['dateFrom'] . ' TO ' . $this->searchParams['dateTo'] . ']';
+            $search['params']['filterquery'][]['query'] = '{!join from=' . $fields['uid'] . ' to=' . $fields['uid'] . '}' . $fields['date'] . ':[' . $this->search['dateFrom'] . ' TO ' . $this->search['dateTo'] . ']';
         }
 
         // Add extended search query.
@@ -218,8 +218,8 @@ class SearchController extends AbstractController
             $search['query'] = $this->addExtendedSearchQuery();
         }
 
-        if (isset($this->searchParams['fq']) && is_array($this->searchParams['fq'])) {
-            foreach ($this->searchParams['fq'] as $fq) {
+        if (isset($this->search['fq']) && is_array($this->search['fq'])) {
+            foreach ($this->search['fq'] as $fq) {
                 $search['params']['filterquery'][]['query'] = $fq;
             }
         }
@@ -290,8 +290,8 @@ class SearchController extends AbstractController
         // if collections are given, we prepare the collections query string
         // extract collections from collection parameter
         $collections = null;
-        if (array_key_exists('collection', $this->searchParams)) {
-            foreach (explode(',', $this->searchParams['collection']) as $collectionEntry) {
+        if (array_key_exists('collection', $this->search)) {
+            foreach (explode(',', $this->search['collection']) as $collectionEntry) {
                 if (!empty($collectionEntry)) {
                     $collections[] = $this->collectionRepository->findByUid((int) $collectionEntry);
                 }
@@ -341,16 +341,16 @@ class SearchController extends AbstractController
         // If the search query is already set by the simple search field, we have to reset it.
         $query = '';
         $allowedOperators = ['AND', 'OR', 'NOT'];
-        $numberOfExtQueries = count($this->searchParams['extQuery']);
+        $numberOfExtQueries = count($this->search['extQuery']);
         for ($i = 0; $i < $numberOfExtQueries; $i++) {
-            if (!empty($this->searchParams['extQuery'][$i])) {
+            if (!empty($this->search['extQuery'][$i])) {
                 if (
-                    in_array($this->searchParams['extOperator'][$i], $allowedOperators)
+                    in_array($this->search['extOperator'][$i], $allowedOperators)
                 ) {
                     if (!empty($query)) {
-                        $query .= ' ' . $this->searchParams['extOperator'][$i] . ' ';
+                        $query .= ' ' . $this->search['extOperator'][$i] . ' ';
                     }
-                    $query .= Indexer::getIndexFieldName($this->searchParams['extField'][$i], $this->settings['storagePid']) . ':(' . Solr::escapeQuery($this->searchParams['extQuery'][$i]) . ')';
+                    $query .= Indexer::getIndexFieldName($this->search['extField'][$i], $this->settings['storagePid']) . ':(' . Solr::escapeQuery($this->search['extQuery'][$i]) . ')';
                 }
             }
         }
@@ -554,21 +554,21 @@ class SearchController extends AbstractController
         $listRequestData = GeneralUtility::_GPmerged('tx_dlf_listview');
 
         if (!empty($collectionRequestData)) {
-            $this->searchParams = $collectionRequestData['searchParameter'];
-            if (empty($this->searchParams['collection'])) {
-                $this->searchParams['collection'] = $collectionRequestData['collection'];
+            $this->search = $collectionRequestData['search'];
+            if (empty($this->search['collection'])) {
+                $this->search['collection'] = $collectionRequestData['collection'];
 
             }
             $this->addFacetsMenu();
-            $this->view->assign('lastSearch', $this->searchParams);
-            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $this->searchParams);
+            $this->view->assign('lastSearch', $this->search);
+            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $this->search);
         }
 
         if (!empty($listRequestData)) {
-            $this->searchParams = $listRequestData['searchParameter'];
+            $this->search = $listRequestData['search'];
             $this->addFacetsMenu();
-            $this->view->assign('lastSearch', $this->searchParams);
-            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $this->searchParams);
+            $this->view->assign('lastSearch', $this->search);
+            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $this->search);
         }
 
         if (empty($collectionRequestData) && empty($listRequestData)) {
@@ -596,7 +596,7 @@ class SearchController extends AbstractController
         $listedMetadata = $this->metadataRepository->findByIsListed(true);
 
         $this->view->assign('page', $currentPage);
-        $this->view->assign('lastSearch', $this->searchParams);
+        $this->view->assign('lastSearch', $this->search);
         $this->view->assign('listedMetadata', $listedMetadata);
         $this->view->assign('sortableMetadata', $sortableMetadata);
 
@@ -611,7 +611,7 @@ class SearchController extends AbstractController
                     'Collection',
                     null,
                     [
-                        'searchParameter' => $this->searchParams
+                        'search' => $this->search
                     ],
                     $this->settings['targetPid']
                 );
@@ -621,7 +621,7 @@ class SearchController extends AbstractController
                     'ListView',
                     null,
                     [
-                        'searchParameter' => $this->searchParams
+                        'search' => $this->search
                     ],
                     $this->settings['targetPid']
                 );
@@ -638,19 +638,19 @@ class SearchController extends AbstractController
      */
     private function sanitizeDates() : void
     {
-        if (!empty($this->searchParams['dateFrom']) || !empty($this->searchParams['dateTo'])) {
-            if (empty($this->searchParams['dateFrom']) && !empty($this->searchParams['dateTo'])) {
-                $this->searchParams['dateFrom'] = '*';
+        if (!empty($this->search['dateFrom']) || !empty($this->search['dateTo'])) {
+            if (empty($this->search['dateFrom']) && !empty($this->search['dateTo'])) {
+                $this->search['dateFrom'] = '*';
             }
 
-            if (empty($this->searchParams['dateTo']) && !empty($this->searchParams['dateFrom'])) {
-                $this->searchParams['dateTo'] = 'NOW';
+            if (empty($this->search['dateTo']) && !empty($this->search['dateFrom'])) {
+                $this->search['dateTo'] = 'NOW';
             }
 
-            if ($this->searchParams['dateFrom'] > $this->searchParams['dateTo']) {
-                $tmpDate = $this->searchParams['dateFrom'];
-                $this->searchParams['dateFrom'] = $this->searchParams['dateTo'];
-                $this->searchParams['dateTo'] = $tmpDate;
+            if ($this->search['dateFrom'] > $this->search['dateTo']) {
+                $tmpDate = $this->search['dateFrom'];
+                $this->search['dateFrom'] = $this->search['dateTo'];
+                $this->search['dateTo'] = $tmpDate;
             }
         }
     }
