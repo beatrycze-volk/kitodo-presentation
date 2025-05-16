@@ -76,10 +76,9 @@ class CollectionController extends AbstractController
      */
     public function listAction(): ResponseInterface
     {
-        $solr = Solr::getInstance($this->settings['solrcore']);
-
-        if (!$solr->ready) {
-            $this->logger->error('Apache Solr not available');
+        // Quit without doing anything if required variables are not set.
+        if (empty($this->settings['solrcore'])) {
+            $this->logger->warning('Incomplete plugin configuration for SOLR. Please check the plugin settings for UID of SOLR core.');
             return $this->htmlResponse();
         }
 
@@ -87,20 +86,38 @@ class CollectionController extends AbstractController
 
         // Sort collections according to order in plugin flexform configuration
         if ($this->settings['collections']) {
-            $sortedCollections = [];
             foreach (GeneralUtility::intExplode(',', $this->settings['collections']) as $uid) {
-                $sortedCollections[$uid] = $this->collectionRepository->findByUid($uid);
+                $collections[$uid] = $this->collectionRepository->findByUid($uid);
             }
-            $collections = $sortedCollections;
         } else {
             $collections = $this->collectionRepository->findAll();
         }
 
-        if (count($collections) == 1 && empty($this->settings['dont_show_single']) && is_array($collections)) {
-            return $this->redirect('show', null, null, ['collection' => array_pop($collections)]);
+        if ($this->settings['showSingle'] == 1) {
+            if (count($collections) == 1 && is_array($collections)) {
+                $this->redirect(
+                    'show',
+                    null,
+                    null,
+                    [
+                        'collection' => array_pop($collections)
+                    ]
+                );
+            } else {
+                $search = $this->getParametersSafely('search');
+                $collection = $this->collectionRepository->findByUid($search['collection']);
+                $this->redirect(
+                    'show',
+                    null,
+                    null,
+                    [
+                        'collection' => $collection
+                    ]
+                );
+            }
         }
 
-        $processedCollections = $this->processCollections($collections, $solr);
+        $processedCollections = $this->processCollections($collections);
 
         // Randomize sorting?
         if (!empty($this->settings['randomize'])) {
@@ -123,30 +140,45 @@ class CollectionController extends AbstractController
      */
     public function showAction(Collection $collection): ResponseInterface
     {
-        $search = $this->getParametersSafely('search');
+        // Quit without doing anything if required variables are not set.
+        if (empty($this->settings['solrcore'])) {
+            $this->logger->warning('Incomplete plugin configuration for SOLR. Please check the plugin settings for UID of SOLR core.');
+            return $this->htmlResponse();
+        }
 
-        // Instantiate the Solr. Without Solr present, we can't do anything.
-        $solr = Solr::getInstance($this->settings['solrcore']);
-        if (!$solr->ready) {
-            $this->logger->error('Apache Solr not available');
+        $search = $this->getParametersSafely('search');
+        $searchRequestData = GeneralUtility::_GPmerged('tx_dlf_search');
+
+        if (isset($searchRequestData['search']) && is_array($searchRequestData['search'])) {
+            $search = array_merge($search ?: [], $searchRequestData['search']);
+            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $search);
+        }
+
+        if (!isset($search['collection']) && !isset($collection)) {
+            $this->logger->warning('Collection is not set.');
             return $this->htmlResponse();
         }
 
         // Pagination of Results: Pass the currentPage to the fluid template to calculate current index of search result.
-        $currentPage = $this->getParametersSafely('page');
-        if (empty($currentPage)) {
-            $currentPage = 1;
+        $currentPage = $this->getParametersSafely('page') ?? 1;
+
+        if (!isset($collection)) {
+            $collection = $this->collectionRepository->findByUid($search['collection']);
+        } else {
+            $search['collection'] = $collection->getUid();
         }
 
-        $search['collection'] = $collection->getUid();
-        // If a targetPid is given, the results will be shown by ListView on the target page.
+        // If a targetPid is given, the results will be shown by Collection on the target page.
         if (!empty($this->settings['targetPid'])) {
-            return $this->redirect(
-                'main', 'ListView', null,
+            $this->redirect(
+                'show',
+                null,
+                null,
                 [
-                    'search' => $search,
+                    'collection' => $collection,
                     'page' => $currentPage
-                ], $this->settings['targetPid']
+                ],
+                $this->settings['targetPid']
             );
         }
 
@@ -159,24 +191,19 @@ class CollectionController extends AbstractController
         // get all sortable metadata records
         $sortableMetadata = $this->metadataRepository->findByIsSortable(true);
 
-        // get all documents of given collection
-        $solrResults = null;
-        if (is_array($search) && !empty($search)) {
-            $solrResults = $this->documentRepository->findSolrByCollection($collection, $this->settings, $search, $listedMetadata, $indexedMetadata);
+        $solrResults = $this->documentRepository->findSolrByCollection($collection, $this->settings, $search, $listedMetadata, $indexedMetadata);
 
-            $itemsPerPage = $this->settings['list']['paginate']['itemsPerPage'];
-            if (empty($itemsPerPage)) {
-                $itemsPerPage = 25;
-            }
-            $solrPaginator = new SolrPaginator($solrResults, $currentPage, $itemsPerPage);
-            $simplePagination = new SimplePagination($solrPaginator);
+        $itemsPerPage = $this->settings['list']['paginate']['itemsPerPage'] ?? 25;
 
-            $pagination = $this->buildSimplePagination($simplePagination, $solrPaginator);
-            $this->view->assignMultiple([ 'pagination' => $pagination, 'paginator' => $solrPaginator ]);
-        }
+        $solrPaginator = new SolrPaginator($solrResults, $currentPage, $itemsPerPage);
+        $simplePagination = new SimplePagination($solrPaginator);
+
+        $pagination = $this->buildSimplePagination($simplePagination, $solrPaginator);
+        $this->view->assignMultiple([ 'pagination' => $pagination, 'paginator' => $solrPaginator ]);
 
         $this->view->assign('viewData', $this->viewData);
-        $this->view->assign('documents', $solrResults);
+        $this->view->assign('countDocuments', $solrResults->count());
+        $this->view->assign('countResults', $solrResults->getNumFound());
         $this->view->assign('collection', $collection);
         $this->view->assign('page', $currentPage);
         $this->view->assign('lastSearch', $search);
@@ -199,12 +226,20 @@ class CollectionController extends AbstractController
         $search = $this->getParametersSafely('search');
 
         $collection = null;
-        if ($search['collection']['__identity'] && MathUtility::canBeInterpretedAsInteger($search['collection']['__identity'])) {
-            $collection = $this->collectionRepository->findByUid($search['collection']['__identity']);
+        if ($search['collection'] && MathUtility::canBeInterpretedAsInteger($search['collection'])) {
+            $collection = $this->collectionRepository->findByUid($search['collection']);
         }
 
         // output is done by show action
-        return $this->redirect('show', null, null, ['search' => $search, 'collection' => $collection]);
+        return $this->redirect(
+            'show',
+            null,
+            null,
+            [
+                'collection' => $collection,
+                'search' => $search
+            ]
+        );
     }
 
     /**
@@ -213,12 +248,13 @@ class CollectionController extends AbstractController
      * @access private
      *
      * @param QueryResultInterface|array|object $collections to be processed
-     * @param Solr $solr for query
      *
      * @return array
      */
-    private function processCollections($collections, Solr $solr): array
+    private function processCollections($collections): array
     {
+        $solr = Solr::getInstance($this->settings['solrcore']);
+
         $processedCollections = [];
 
         // Process results.

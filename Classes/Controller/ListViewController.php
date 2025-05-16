@@ -13,9 +13,9 @@ namespace Kitodo\Dlf\Controller;
 
 use Kitodo\Dlf\Common\SolrPaginator;
 use Psr\Http\Message\ResponseInterface;
-use TYPO3\CMS\Core\Pagination\SimplePagination;
 use Kitodo\Dlf\Domain\Repository\MetadataRepository;
-use Kitodo\Dlf\Domain\Repository\CollectionRepository;
+use TYPO3\CMS\Core\Pagination\SimplePagination;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Controller class for the plugin 'ListView'.
@@ -27,24 +27,6 @@ use Kitodo\Dlf\Domain\Repository\CollectionRepository;
  */
 class ListViewController extends AbstractController
 {
-    /**
-     * @access protected
-     * @var CollectionRepository
-     */
-    protected CollectionRepository $collectionRepository;
-
-    /**
-     * @access public
-     *
-     * @param CollectionRepository $collectionRepository
-     * 
-     * @return void
-     */
-    public function injectCollectionRepository(CollectionRepository $collectionRepository): void
-    {
-        $this->collectionRepository = $collectionRepository;
-    }
-
     /**
      * @access protected
      * @var MetadataRepository
@@ -64,12 +46,6 @@ class ListViewController extends AbstractController
     }
 
     /**
-     * @access protected
-     * @var array of the current search parameters
-     */
-    protected $search;
-
-    /**
      * The main method of the plugin
      *
      * @access public
@@ -78,15 +54,20 @@ class ListViewController extends AbstractController
      */
     public function mainAction(): ResponseInterface
     {
-        $this->search = $this->getParametersSafely('search');
-        $this->search = is_array($this->search) ? array_filter($this->search, 'strlen') : [];
+        // Quit without doing anything if required variables are not set.
+        if (empty($this->settings['solrcore'])) {
+            $this->logger->warning('Incomplete plugin configuration for SOLR. Please check the plugin settings for UID of SOLR core.');
+            return $this->htmlResponse();
+        }
 
-        // extract collection(s) from collection parameter
-        $collections = [];
-        if (array_key_exists('collection', $this->search)) {
-            foreach(explode(',', $this->search['collection']) as $collectionEntry) {
-                $collections[] = $this->collectionRepository->findByUid((int) $collectionEntry);
-            }
+        $search = $this->getParametersSafely('search');
+        $search = is_array($search) ? array_filter($search, 'strlen') : [];
+
+        $searchRequestData = GeneralUtility::_GPmerged('tx_dlf_search');
+
+        if (isset($searchRequestData['search']) && is_array($searchRequestData['search'])) {
+            $search = array_merge($search ?: [], $searchRequestData['search']);
+            $this->request->getAttribute('frontend.user')->setKey('ses', 'search', $search);
         }
 
         // Get current page from request data because the parameter is shared between plugins
@@ -98,19 +79,11 @@ class ListViewController extends AbstractController
         // get all metadata records to be shown in results
         $listedMetadata = $this->metadataRepository->findByIsListed(true);
 
-        // get all indexed metadata fields
-        $indexedMetadata = $this->metadataRepository->findByIndexIndexed(true);
+        if (!empty($search)) {
+            $solrResults = $this->documentRepository->findSolrWithoutCollection($this->settings, $search, $listedMetadata);
 
-        $solrResults = null;
-        $numResults = 0;
-        if (!empty($this->search)) {
-            $solrResults = $this->documentRepository->findSolrByCollections($collections, $this->settings, $this->search, $listedMetadata, $indexedMetadata);
-            $numResults = $solrResults->getNumFound();
+            $itemsPerPage = $this->settings['list']['paginate']['itemsPerPage'] ?? 25;
 
-            $itemsPerPage = $this->settings['list']['paginate']['itemsPerPage'];
-            if (empty($itemsPerPage)) {
-                $itemsPerPage = 25;
-            }
             $solrPaginator = new SolrPaginator($solrResults, $currentPage, $itemsPerPage);
             $simplePagination = new SimplePagination($solrPaginator);
 
@@ -119,10 +92,10 @@ class ListViewController extends AbstractController
         }
 
         $this->view->assign('viewData', $this->viewData);
-        $this->view->assign('documents', $solrResults);
-        $this->view->assign('numResults', $numResults);
+        $this->view->assign('countDocuments', !empty($solrResults) ? $solrResults->count() : 0);
+        $this->view->assign('countResults', !empty($solrResults) ? $solrResults->getNumFound() : 0);
         $this->view->assign('page', $currentPage);
-        $this->view->assign('lastSearch', $this->search);
+        $this->view->assign('lastSearch', $search);
         $this->view->assign('sortableMetadata', $sortableMetadata);
         $this->view->assign('listedMetadata', $listedMetadata);
 

@@ -141,7 +141,7 @@
 				<source><![CDATA[Show only these collections]]></source>
 				<target><![CDATA[Nur diese Kollektionen anzeigen]]></target>
 			</trans-unit>
-			<trans-unit id="plugins.collection.flexform.dont_show_single" approved="yes">
+			<trans-unit id="plugins.collection.flexform.showSingle" approved="yes">
 				<source><![CDATA[Show single collection in overview?]]></source>
 				<target><![CDATA[Einzelne Kollektion in Übersicht anzeigen?]]></target>
 			</trans-unit>

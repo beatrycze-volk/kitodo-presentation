@@ -380,7 +380,7 @@
 			<trans-unit id="plugins.collection.flexform.show_userdefined.exclusive">
 				<source><![CDATA[exclusively]]></source>
 			</trans-unit>
-			<trans-unit id="plugins.collection.flexform.dont_show_single">
+			<trans-unit id="plugins.collection.flexform.showSingle">
 				<source><![CDATA[Show single collection in overview?]]></source>
 			</trans-unit>
 			<trans-unit id="plugins.collection.flexform.randomize">

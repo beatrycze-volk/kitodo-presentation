@@ -38,7 +38,7 @@
 
     <!-- Fulltext switch -->
     <f:if condition="{settings.fulltext}">
-        <f:comment><!-- needs to be written like this, to check if fulltext searchparam == NULL --></f:comment>
+        <f:comment><!-- needs to be written like this, to check if fulltext search param == NULL --></f:comment>
         <f:if condition="{lastSearch.fulltext} ==">
             <f:then>
                 <f:form.radio property="fulltext" value="0" id="tx-dlf-search-fulltext-no-{viewData.uniqueId}" class="tx-dlf-search-fulltext" checked="{settings.fulltextPreselect} == 0" />
@@ -118,7 +118,7 @@
         <f:render partial="ListView/SearchHits" arguments="{_all}" />
         <f:variable name="action" value="search" />
         <f:variable name="controller" value="Search" />
-        <f:if condition="{numResults} > 0">
+        <f:if condition="{countResults} > 0">
             <f:render partial="ListView/SortingForm" arguments="{_all}" />
             <f:render partial="ListView/Results" arguments="{_all}" />
         </f:if>
