@@ -14,6 +14,7 @@ namespace Kitodo\Dlf\Common;
 
 use TYPO3\CMS\Core\Messaging\FlashMessage;
 use TYPO3\CMS\Core\Messaging\Renderer\FlashMessageRendererInterface;
+use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
 
 /**
  * A class representing a bootstrap flash messages.
@@ -33,24 +34,22 @@ class KitodoFlashMessageRenderer implements FlashMessageRendererInterface
      * @var array The message severity class names
      */
     protected static array $classes = [
-        // Todo: FlashMessage constants deprecated in v12, remove when dropping v11 support
-        FlashMessage::NOTICE => 'notice',
-        FlashMessage::INFO => 'info',
-        FlashMessage::OK => 'success',
-        FlashMessage::WARNING => 'warning',
-        FlashMessage::ERROR => 'danger'
+        ContextualFeedbackSeverity::NOTICE => 'notice',
+        ContextualFeedbackSeverity::INFO => 'info',
+        ContextualFeedbackSeverity::OK => 'success',
+        ContextualFeedbackSeverity::WARNING => 'warning',
+        ContextualFeedbackSeverity::ERROR => 'danger'
     ];
 
     /**
      * @var array The message severity icon names
      */
     protected static array $icons = [
-        // Todo: FlashMessage constants deprecated in v12, remove when dropping v11 support
-        FlashMessage::NOTICE => 'lightbulb-o',
-        FlashMessage::INFO => 'info',
-        FlashMessage::OK => 'check',
-        FlashMessage::WARNING => 'exclamation',
-        FlashMessage::ERROR => 'times'
+        ContextualFeedbackSeverity::NOTICE => 'lightbulb-o',
+        ContextualFeedbackSeverity::INFO => 'info',
+        ContextualFeedbackSeverity::OK => 'check',
+        ContextualFeedbackSeverity::WARNING => 'exclamation',
+        ContextualFeedbackSeverity::ERROR => 'times'
     ];
 
     /**
