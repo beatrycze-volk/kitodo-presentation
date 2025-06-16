@@ -97,22 +97,25 @@ abstract class AbstractController extends ActionController implements LoggerAwar
      */
     protected function initialize(): void
     {
-        $this->requestData = GeneralUtility::_GPmerged('tx_dlf');
-        $this->pageUid = (int) GeneralUtility::_GET('id');
-
-        // Sanitize user input to prevent XSS attacks.
-        $this->sanitizeRequestData();
-
         // Get extension configuration.
         $this->extConf = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('dlf');
 
         $this->logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
 
-        $this->viewData = [
-            'pageUid' => $this->pageUid,
-            'uniqueId' => uniqid(),
-            'requestData' => $this->requestData
-        ];
+        if ($this->request->getAttribute('applicationType') === 1) {
+            /** @var Request $request */
+            $this->requestData = $request->getQueryParams()['tx_dlf'] ?? [];
+            $this->pageUid = !($this instanceof OaiPmhController) ? $this->request->getAttribute('routing')->getPageId() : 0;
+
+            // Sanitize user input to prevent XSS attacks.
+            $this->sanitizeRequestData();
+
+            $this->viewData = [
+                'pageUid' => $this->pageUid,
+                'uniqueId' => uniqid(),
+                'requestData' => $this->requestData
+            ];
+        }
     }
 
     /**
