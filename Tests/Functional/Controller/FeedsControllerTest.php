@@ -24,6 +24,13 @@ class FeedsControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/solrcores.csv'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -57,6 +64,6 @@ class FeedsControllerTest extends AbstractControllerTest
             1003 – NEW: 6 Fugues - Go. S. 317
             feedMeta:0
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

@@ -29,7 +29,6 @@ class SolrSearchTest extends FunctionalTestCase
     ];
 
     private Solr $solr;
-    private SolrCoreRepository $solrCoreRepository;
 
     public function setUp(): void
     {
@@ -78,22 +77,5 @@ class SolrSearchTest extends FunctionalTestCase
             $this->importCSVDataSet($filePath);
         }
         $this->initializeRepository(DocumentRepository::class, 0);
-    }
-
-    protected function setUpSolr($uid, $storagePid, $solrFixtures)
-    {
-        $this->solrCoreRepository = $this->initializeRepository(SolrCoreRepository::class, $storagePid);
-
-        $coreName = Solr::createCore('solrSearchTest');
-        $solr = Solr::getInstance($coreName);
-        foreach ($solrFixtures as $filePath) {
-            $this->importSolrDocuments($solr, $filePath);
-        }
-
-        $coreModel = $this->solrCoreRepository->findByUid($uid);
-        $coreModel->setIndexName($solr->core);
-        $this->solrCoreRepository->update($coreModel);
-        $this->persistenceManager->persistAll();
-        return $solr;
     }
 }

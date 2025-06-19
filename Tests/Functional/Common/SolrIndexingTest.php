@@ -31,9 +31,6 @@ class SolrIndexingTest extends FunctionalTestCase
     /** @var DocumentRepository */
     protected $documentRepository;
 
-    /** @var SolrCoreRepository */
-    protected $solrCoreRepository;
-
     public function setUp(): void
     {
         parent::setUp();

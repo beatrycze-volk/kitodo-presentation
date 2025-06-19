@@ -26,6 +26,13 @@ class ListViewControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/documents.solr.json'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -72,6 +79,6 @@ class ListViewControllerTest extends AbstractControllerTest
                 lastSearch.query: 10 Keyboard pieces
                 numResults: 1
             </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

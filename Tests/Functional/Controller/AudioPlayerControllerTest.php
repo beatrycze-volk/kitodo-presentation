@@ -22,6 +22,13 @@ class AudioPlayerControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/pages.csv',
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -43,6 +50,6 @@ class AudioPlayerControllerTest extends AbstractControllerTest
         $response = $controller->processRequest($request);
         $actual = $response->getBody()->getContents();
         $expected = 'This template should be returned.';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

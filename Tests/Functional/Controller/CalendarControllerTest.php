@@ -26,6 +26,13 @@ class CalendarControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/metadata.csv'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -63,7 +70,7 @@ class CalendarControllerTest extends AbstractControllerTest
             parentDocumentId:1
             allYearDocTitle:Test Newspaper
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 
     /**
@@ -105,6 +112,6 @@ class CalendarControllerTest extends AbstractControllerTest
             allYearDocTitle: Newspaper for testing purposes
             documents: 2021,2022,2023,
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

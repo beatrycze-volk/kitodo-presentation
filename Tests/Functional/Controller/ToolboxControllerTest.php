@@ -23,6 +23,13 @@ class ToolboxControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/solrcores.csv'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -71,7 +78,7 @@ class ToolboxControllerTest extends AbstractControllerTest
         $response = $controller->processRequest($request);
         $actual = $response->getBody()->getContents();
         $expected = '<html>fulltext:1,activateFullTextInitially:1</html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 
     /**
@@ -100,7 +107,7 @@ class ToolboxControllerTest extends AbstractControllerTest
             http://web:8001/Tests/Fixtures/Controller/mets_local/jpegs/00000001.tif.large.jpg (JPG)
             http://web:8001/Tests/Fixtures/Controller/mets_local/jpegs/00000002.tif.large.jpg (JPG)
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 
     /**
@@ -123,7 +130,7 @@ class ToolboxControllerTest extends AbstractControllerTest
         $response = $controller->processRequest($request);
         $actual = $response->getBody()->getContents();
         $expected = '<html>imageManipulation:1,parentContainer:.parent-container</html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 
     /**
@@ -148,7 +155,7 @@ class ToolboxControllerTest extends AbstractControllerTest
         $response = $controller->processRequest($request);
         $actual = $response->getBody()->getContents();
         $expected = '<html>double:1</html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
 
     }
 
@@ -179,7 +186,7 @@ class ToolboxControllerTest extends AbstractControllerTest
             http://web:8001/Tests/Fixtures/Controller/mets_local/jpegs/00000002.tif.pdf
             workLink:http://web:8001/Tests/Fixtures/Controller/mets_local/jpegs/00000002.tif.pdf
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 
     /**
@@ -225,6 +232,6 @@ class ToolboxControllerTest extends AbstractControllerTest
             LABEL_ENCRYPTED:encryptedInputName
             CURRENT_DOCUMENT:2002
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

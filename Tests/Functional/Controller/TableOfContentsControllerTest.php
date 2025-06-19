@@ -23,6 +23,13 @@ class TableOfContentsControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/solrcores.csv'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -59,6 +66,6 @@ other – [Diverse]: 6 Airs Variés et tirés du Journal die Grazienbibliothek 1
 
 
 </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

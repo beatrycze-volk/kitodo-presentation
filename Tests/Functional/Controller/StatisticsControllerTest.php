@@ -24,6 +24,13 @@ class StatisticsControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/documents.csv'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -51,6 +58,6 @@ class StatisticsControllerTest extends AbstractControllerTest
         $response = $controller->processRequest($request);
         $actual = $response->getBody()->getContents();
         $expected = '<html>There are 3 titles and 3 volumes.</html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

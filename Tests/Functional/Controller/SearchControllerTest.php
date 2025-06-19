@@ -32,6 +32,13 @@ class SearchControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/documents.solr.json'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -99,7 +106,7 @@ class SearchControllerTest extends AbstractControllerTest
             currentDocument:1001
             searchFields:field1,field2,field3,
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 
     /**
@@ -168,7 +175,7 @@ class SearchControllerTest extends AbstractControllerTest
                 type
                  other: type_faceting:(&quot;other&quot;) manuscript: type_faceting:(&quot;manuscript&quot;)
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
 
     }
 

@@ -15,8 +15,8 @@ namespace Kitodo\Dlf\Tests\Functional;
 use Dotenv\Dotenv;
 use GuzzleHttp\Client as HttpClient;
 use Kitodo\Dlf\Common\Solr\Solr;
+use Kitodo\Dlf\Domain\Repository\SolrCoreRepository;
 use Symfony\Component\Yaml\Yaml;
-use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager;
@@ -88,6 +88,8 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
      * @var HttpClient
      */
     protected $httpClient;
+
+    protected SolrCoreRepository $solrCoreRepository;
 
     public function __construct()
     {
@@ -184,6 +186,22 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
         $finder->getAllSites(false); // useCache = false
     }
 
+    /**
+     * Initializes a repository with the given class name and storage PID.
+     *
+     * This method creates an instance of the specified repository class,
+     * sets the default query settings to use the specified storage PID,
+     * and returns the initialized repository.
+     *
+     * @access protected
+     *
+     * @template T
+     *
+     * @param class-string<T> $className The fully qualified class name of the repository
+     * @param int $storagePid The storage PID to set in the query settings
+     *
+     * @return T The initialized repository
+     */
     protected function initializeRepository(string $className, int $storagePid)
     {
         $repository = GeneralUtility::makeInstance($className);
@@ -221,6 +239,41 @@ class FunctionalTestCase extends \TYPO3\TestingFramework\Core\Functional\Functio
         $backendUser = GeneralUtility::makeInstance(BackendUserAuthentication::class);
         $backendUser->user["lang"] = $locale;
         $GLOBALS['BE_USER'] = $backendUser;
+    }
+
+    /**
+     * Sets up the Solr core for the test environment.
+     *
+     * This method initializes the Solr core repository and imports the necessary Solr documents.
+     *
+     * @access protected
+     *
+     * @param int $uid The UID of the Solr core to set up
+     * @param int $storagePid The storage PID for the Solr core
+     * @param array $solrFixtures An array of file paths to Solr fixtures
+     *
+     * @return Solr|null The initialized Solr instance
+     */
+    protected function setUpSolr(int $uid, int $storagePid, array $solrFixtures): Solr|null
+    {
+        $this->solrCoreRepository = $this->initializeRepository(SolrCoreRepository::class, $storagePid);
+
+        // Setup Solr only once for all tests in this suite
+        static $solr = null;
+
+        if ($solr === null) {
+            $coreName = Solr::createCore();
+            $solr = Solr::getInstance($coreName);
+            foreach ($solrFixtures as $filePath) {
+                $this->importSolrDocuments($solr, $filePath);
+            }
+        }
+
+        $coreModel = $this->solrCoreRepository->findByUid($uid);
+        $coreModel->setIndexName($solr->core);
+        $this->solrCoreRepository->update($coreModel);
+        $this->persistenceManager->persistAll();
+        return $solr;
     }
 
     /**

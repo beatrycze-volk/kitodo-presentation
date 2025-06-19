@@ -14,6 +14,7 @@ namespace Kitodo\Dlf\Tests\Functional\Controller;
 
 use Kitodo\Dlf\Common\Solr\Solr;
 use Kitodo\Dlf\Controller\AbstractController;
+use Kitodo\Dlf\Domain\Model\Document;
 use Kitodo\Dlf\Domain\Model\SolrCore;
 use Kitodo\Dlf\Domain\Repository\DocumentRepository;
 use Kitodo\Dlf\Domain\Repository\SolrCoreRepository;
@@ -26,11 +27,20 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 abstract class AbstractControllerTest extends FunctionalTestCase
 {
-    public $currentSolrUid = 1;
+    protected int $currentSolrUid = 1;
 
-    public $currentCoreName = '';
+    protected string $currentCoreName = '';
 
-    protected function setUpData($databaseFixtures): void
+    /**
+     * Set up the data for the test.
+     *
+     * @access protected
+     *
+     * @param array $databaseFixtures
+     *
+     * @return void
+     */
+    protected function setUpData(array $databaseFixtures): void
     {
         foreach ($databaseFixtures as $filePath) {
             $this->importCSVDataSet($filePath);
@@ -40,37 +50,24 @@ abstract class AbstractControllerTest extends FunctionalTestCase
 
         $allFixtureDocuments = $documentRepository->findAll();
         foreach ($allFixtureDocuments as $document) {
+            /* @var Document $document */
             $document->setSolrCore($this->currentSolrUid);
             $documentRepository->update($document);
         }
         $this->persistenceManager->persistAll();
     }
 
-    protected function setUpSolr($uid, $storagePid, $solrFixtures, $name = '')
-    {
-        $this->solrCoreRepository = $this->initializeRepository(SolrCoreRepository::class, $storagePid);
-
-        $solr = null;
-
-        if ($solr === null) {
-            $coreName = Solr::createCore();
-            $solr = Solr::getInstance($coreName);
-            foreach ($solrFixtures as $filePath) {
-                $this->importSolrDocuments($solr, $filePath);
-            }
-        }
-
-        $coreModel = new SolrCore();
-        $coreModel->setIndexName($coreName);
-        $coreModel->setLabel($coreName);
-        $this->solrCoreRepository->add($coreModel);
-        $this->persistenceManager->persistAll();
-        $this->currentSolrUid = $coreModel->getUid();
-        $this->currentCoreName = $coreName;
-
-    }
-
-    protected function setUpRequest($actionName, $arguments = []): Request
+    /**
+     * Set up the request for the test.
+     *
+     * @access protected
+     *
+     * @param string $actionName
+     * @param array $arguments
+     *
+     * @return void
+     */
+    protected function setUpRequest(string $actionName, array $arguments = []): Request
     {
         $request = new Request();
         $request->setControllerActionName($actionName);
@@ -78,7 +75,20 @@ abstract class AbstractControllerTest extends FunctionalTestCase
         return $request;
     }
 
-    protected function setUpController($class, $settings, $templateHtml = ''): AbstractController
+    /**
+     * Set up the controller for the test.
+     *
+     * @access protected
+     *
+     * @template T
+     *
+     * @param class-string<T> $class The fully qualified class name of the repository
+     * @param array $settings
+     * @param string $templateHtml
+     *
+     * @return T
+     */
+    protected function setUpController(string $class, array $settings, string $templateHtml = ''): AbstractController
     {
         $view = new StandaloneView();
         $view->setTemplateSource($templateHtml);

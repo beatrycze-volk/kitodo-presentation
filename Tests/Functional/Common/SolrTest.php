@@ -91,21 +91,4 @@ class SolrTest extends FunctionalTestCase
         }
         $this->initializeRepository(DocumentRepository::class, 0);
     }
-
-    protected function setUpSolr($uid, $storagePid, $solrFixtures)
-    {
-        $solrCoreRepository = $this->initializeRepository(SolrCoreRepository::class, $storagePid);
-
-        $coreName = Solr::createCore('SolrTestCore');
-        $solr = Solr::getInstance($coreName);
-        foreach ($solrFixtures as $filePath) {
-            $this->importSolrDocuments($solr, $filePath);
-        }
-
-        $coreModel = $solrCoreRepository->findByUid($uid);
-        $coreModel->setIndexName($solr->core);
-        $solrCoreRepository->update($coreModel);
-        $this->persistenceManager->persistAll();
-        return $solr;
-    }
 }

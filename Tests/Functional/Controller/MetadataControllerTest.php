@@ -23,6 +23,13 @@ class MetadataControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/solrcores.csv'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -51,6 +58,6 @@ class MetadataControllerTest extends AbstractControllerTest
         $expected = '<html>
             mets_label:10 Keyboard pieces - Go. S. 658
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }

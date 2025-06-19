@@ -28,6 +28,13 @@ class CollectionControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/documents.solr.json'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -53,7 +60,7 @@ class CollectionControllerTest extends AbstractControllerTest
         $response = $controller->processRequest($request);
         $actual = $response->getBody()->getContents();
         $expected = '<html>test-collection</html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 
     /**
@@ -93,7 +100,7 @@ class CollectionControllerTest extends AbstractControllerTest
         $response = $controller->processRequest($request);
         $actual = $response->getBody()->getContents();
         $expected = '<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers">10 Keyboard pieces - Go. S. 658,</html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
 
     }
 

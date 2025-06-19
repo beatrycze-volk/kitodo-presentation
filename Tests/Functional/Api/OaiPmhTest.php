@@ -42,11 +42,6 @@ class OaiPmhTest extends FunctionalTestCase
     /** @var string */
     protected $oaiUrlNoStoragePid;
 
-    /**
-     * @var SolrCoreRepository
-     */
-    protected $solrCoreRepository;
-
     public function setUp(): void
     {
         parent::setUp();

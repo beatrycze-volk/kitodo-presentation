@@ -23,6 +23,13 @@ class PageGridControllerTest extends AbstractControllerTest
         __DIR__ . '/../../Fixtures/Controller/solrcores.csv'
     ];
 
+    /**
+     * Sets up the test case environment.
+     *
+     * @access public
+     *
+     * @return void
+     */
     public function setUp(): void
     {
         parent::setUp();
@@ -53,6 +60,6 @@ class PageGridControllerTest extends AbstractControllerTest
             pageGridEntries[1]:1, http://example.com/mets_audio/jpegs/00000002.tif.thumbnail.jpg
             docUid:2001
         </html>';
-        $this->assertEquals($expected, $actual);
+        self::assertEquals($expected, $actual);
     }
 }
