@@ -139,6 +139,12 @@ final class MetsDocument extends AbstractDocument
 
     /**
      * @access protected
+     * @var SimpleXMLElement This holds the whole XML file as SimpleXMLElement object
+     */
+    protected SimpleXMLElement $xml;
+
+    /**
+     * @access protected
      * @var string URL of the parent document (determined via mptr element), or empty string if none is available
      */
     protected string $parentHref = '';

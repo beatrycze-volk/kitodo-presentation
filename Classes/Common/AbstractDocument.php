@@ -54,7 +54,6 @@ use Ubl\Iiif\Tools\IiifHelper;
  * @property bool $tableOfContentsLoaded flag with information if the table of contents is loaded
  * @property-read string $thumbnail this holds the document's thumbnail location
  * @property bool $thumbnailLoaded flag with information if the thumbnail is loaded
- * @property \SimpleXMLElement $xml this holds the whole XML file as \SimpleXMLElement object
  */
 abstract class AbstractDocument
 {
@@ -281,12 +280,6 @@ abstract class AbstractDocument
      * @var \Kitodo\Dlf\Configuration\UseGroupsConfiguration
      */
     protected UseGroupsConfiguration $useGroupsConfiguration;
-
-    /**
-     * @access protected
-     * @var \SimpleXMLElement This holds the whole XML file as \SimpleXMLElement object
-     */
-    protected \SimpleXMLElement $xml;
 
     /**
      * This gets the location of a downloadable file for a physical page or track
