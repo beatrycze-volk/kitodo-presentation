@@ -60,9 +60,8 @@ use Ubl\Iiif\Services\AbstractImageService;
  * @property-read string $thumbnail this holds the document's thumbnail location
  * @property bool $thumbnailLoaded flag with information if the thumbnail is loaded
  * @property SimpleXMLElement $xml this holds the whole XML file as SimpleXMLElement object
- * @property-read array $mdSec associative array of METS metadata sections indexed by their IDs.
- * @property bool $mdSecLoaded flag with information if the array of METS metadata sections is loaded
- * @property-read array $dmdSec subset of `$mdSec` storing only the dmdSec entries; kept for compatibility.
+ * @property-read array $metadataSections associative array of METS metadata sections indexed by their IDs.
+ * @property-read array $descriptiveMetadataSections subset of `$metadataSections` storing only the dmdSec entries; kept for compatibility.
  * @property-read array $fileGrps this holds the file ID -> USE concordance
  * @property bool $fileGrpsLoaded flag with information if file groups array is loaded
  * @property-read array $fileInfos additional information about files (e.g., ADMID), indexed by ID.
@@ -92,27 +91,19 @@ final class MetsDocument extends AbstractDocument
      * @access protected
      * @var array This maps the ID of each amdSec to the IDs of its children (techMD etc.). When an ADMID references an amdSec instead of techMD etc., this is used to iterate the child elements.
      */
-    protected array $amdSecChildIds = [];
+    protected array $administrativeMetadataSectionChildIds = [];
 
     /**
      * @access protected
      * @var array Associative array of METS metadata sections indexed by their IDs.
      */
-    protected array $mdSec = [];
-
-    /**
-     * @access protected
-     * @var bool Are the METS file's metadata sections loaded?
-     *
-     * @see MetsDocument::$mdSec
-     */
-    protected bool $mdSecLoaded = false;
+    protected array $metadataSections = [];
 
     /**
      * @access protected
      * @var array Subset of $mdSec storing only the dmdSec entries; kept for compatibility.
      */
-    protected array $dmdSec = [];
+    protected array $descriptiveMetadataSections = [];
 
     /**
      * @access protected
@@ -638,13 +629,13 @@ final class MetsDocument extends AbstractDocument
         $metadataSections = [];
         // Load available metadata formats and metadata sections.
         $this->loadFormats();
-        $this->magicGetMdSec();
+        $this->getMetadataSections();
 
         $metadata['type'] = $this->getLogicalUnitType($id);
 
-        if (!empty($this->mdSec)) {
+        if (!empty($this->metadataSections)) {
             foreach ($mdIds as $dmdId) {
-                $mdSectionType = $this->mdSec[$dmdId]['section'];
+                $mdSectionType = $this->metadataSections[$dmdId]['section'];
                 if ($this->hasMetadataSection($metadataSections, $mdSectionType, 'dmdSec')) {
                     continue;
                 }
@@ -772,7 +763,7 @@ final class MetsDocument extends AbstractDocument
 
         $additionalMetadata = $this->getAdditionalMetadataFromDatabase($dmdId);
         // We need a DOMDocument here, because SimpleXML doesn't support XPath functions properly.
-        $domNode = dom_import_simplexml($this->mdSec[$dmdId]['xml']);
+        $domNode = dom_import_simplexml($this->getMetadataSections()[$dmdId]['xml']);
         $domXPath = new DOMXPath($domNode->ownerDocument);
         $this->registerNamespaces($domXPath);
 
@@ -952,25 +943,23 @@ final class MetsDocument extends AbstractDocument
      *
      * @return bool true if extraction successful, false otherwise
      */
-    private function extractMetadataIfTypeSupported(string $dmdId, string $mdSectionType, array &$metadata)
+    private function extractMetadataIfTypeSupported(string $dmdId, string $mdSectionType, array &$metadata): bool
     {
         // Is this metadata format supported?
-        if (!empty($this->formats[$this->mdSec[$dmdId]['type']])) {
-            if (!empty($this->formats[$this->mdSec[$dmdId]['type']]['class'])) {
-                $class = $this->formats[$this->mdSec[$dmdId]['type']]['class'];
-                // Get the metadata from class.
-                if (class_exists($class)) {
-                    $obj = GeneralUtility::makeInstance($class);
-                    if ($obj instanceof MetadataInterface) {
-                        $obj->extractMetadata($this->mdSec[$dmdId]['xml'], $metadata, GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'general')['useExternalApisForMetadata']);
-                        return true;
-                    }
+        $type = $this->getMetadataSections()[$dmdId]['type'] ?? '';
+        if (!empty($this->formats[$type])) {
+            $class = $this->formats[$type]['class'] ?? '';
+            if (!empty($class) && class_exists($class)) {
+                $obj = GeneralUtility::makeInstance($class);
+                if ($obj instanceof MetadataInterface) {
+                    $obj->extractMetadata($this->getMetadataSections()[$dmdId]['xml'], $metadata, GeneralUtility::makeInstance(ExtensionConfiguration::class)->get(self::$extKey, 'general')['useExternalApisForMetadata']);
+                    return true;
                 } else {
-                    $this->logger->warning('Invalid class/method "' . $class . '->extractMetadata()" for metadata format "' . $this->mdSec[$dmdId]['type'] . '"');
+                    $this->logger->warning('Invalid class/method "' . $class . '->extractMetadata()" for metadata format "' . $type . '"');
                 }
             }
         } else {
-            $this->logger->notice('Unsupported metadata format "' . $this->mdSec[$dmdId]['type'] . '" in ' . $mdSectionType . ' with @ID "' . $dmdId . '"');
+            $this->logger->notice('Unsupported metadata format "' . $type . '" in ' . $mdSectionType . ' with @ID "' . $dmdId . '"');
         }
         return false;
     }
@@ -1026,7 +1015,7 @@ final class MetsDocument extends AbstractDocument
                 $queryBuilder->expr()->eq('tx_dlf_metadata.pid', $this->configPid),
                 $queryBuilder->expr()->eq('tx_dlf_metadata.l18n_parent', 0),
                 $queryBuilder->expr()->eq('tx_dlf_metadataformat_joins.pid', $this->configPid),
-                $queryBuilder->expr()->eq('tx_dlf_formats_joins.type', $queryBuilder->createNamedParameter($this->mdSec[$dmdId]['type']))
+                $queryBuilder->expr()->eq('tx_dlf_formats_joins.type', $queryBuilder->createNamedParameter($this->getMetadataSections()[$dmdId]['type']))
             )
             ->executeQuery();
         // Get all metadata without a format, but with a default value next.
@@ -1114,7 +1103,7 @@ final class MetsDocument extends AbstractDocument
     protected function getMetadataIds(string $id): array
     {
         // Load amdSecChildIds concordance
-        $this->magicGetMdSec();
+        $this->getMetadataSections();
         $fileInfo = $this->getFileInfo($id);
 
         // Get DMDID and ADMID of logical structure node
@@ -1139,12 +1128,12 @@ final class MetsDocument extends AbstractDocument
         $allMdIds = explode(' ', $dmdIds);
 
         foreach (explode(' ', $admIds) as $admId) {
-            if (isset($this->mdSec[$admId])) {
+            if (isset($this->metadataSections[$admId])) {
                 // $admId references an actual metadata section such as techMD
                 $allMdIds[] = $admId;
-            } elseif (isset($this->amdSecChildIds[$admId])) {
+            } elseif (isset($this->administrativeMetadataSectionChildIds[$admId])) {
                 // $admId references a <mets:amdSec> element. Resolve child elements.
-                foreach ($this->amdSecChildIds[$admId] as $childId) {
+                foreach ($this->administrativeMetadataSectionChildIds[$admId] as $childId) {
                     $allMdIds[] = $childId;
                 }
             }
@@ -1276,17 +1265,17 @@ final class MetsDocument extends AbstractDocument
      *
      * @return array Array of metadata sections with their IDs as array key
      */
-    protected function magicGetMdSec(): array
+    protected function getMetadataSections(): array
     {
-        if (!$this->mdSecLoaded) {
+        if (empty($this->metadataSections)) {
             $this->loadFormats();
 
             foreach ($this->mets->xpath('./mets:dmdSec') as $dmdSecTag) {
                 $dmdSec = $this->processMdSec($dmdSecTag);
 
                 if ($dmdSec !== null) {
-                    $this->mdSec[$dmdSec['id']] = $dmdSec;
-                    $this->dmdSec[$dmdSec['id']] = $dmdSec;
+                    $this->metadataSections[$dmdSec['id']] = $dmdSec;
+                    $this->descriptiveMetadataSections[$dmdSec['id']] = $dmdSec;
                 }
             }
 
@@ -1302,7 +1291,7 @@ final class MetsDocument extends AbstractDocument
                     $mdSec = $this->processMdSec($mdSecTag);
 
                     if ($mdSec !== null) {
-                        $this->mdSec[$mdSec['id']] = $mdSec;
+                        $this->metadataSections[$mdSec['id']] = $mdSec;
 
                         $childIds[] = $mdSec['id'];
                     }
@@ -1310,13 +1299,11 @@ final class MetsDocument extends AbstractDocument
 
                 $amdSecId = (string) $amdSecTag->attributes()->ID;
                 if (!empty($amdSecId)) {
-                    $this->amdSecChildIds[$amdSecId] = $childIds;
+                    $this->administrativeMetadataSectionChildIds[$amdSecId] = $childIds;
                 }
             }
-
-            $this->mdSecLoaded = true;
         }
-        return $this->mdSec;
+        return $this->metadataSections;
     }
 
     /**
@@ -1326,10 +1313,10 @@ final class MetsDocument extends AbstractDocument
      *
      * @return array Array of metadata sections with their IDs as array key
      */
-    protected function magicGetDmdSec(): array
+    protected function getDescriptiveMetadataSection(): array
     {
-        $this->magicGetMdSec();
-        return $this->dmdSec;
+        $this->getMetadataSections();
+        return $this->descriptiveMetadataSections;
     }
 
     /**
