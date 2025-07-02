@@ -2,7 +2,7 @@ name: Unit and Functional Testing
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dmdsec" ]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
