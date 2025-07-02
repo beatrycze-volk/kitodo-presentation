@@ -77,8 +77,8 @@ class MetsDocumentTest extends FunctionalTestCase
         self::assertEquals(['https://katalog.slub-dresden.de/id/0-1703800435'], $toplevelMetadata['dvlinks_reference']);
 
         self::assertEquals([
-            'DMDLOG_0000' => $doc->mdSec['DMDLOG_0000'],
-        ], $doc->dmdSec);
+            'DMDLOG_0000' => $doc->metadataSections['DMDLOG_0000'],
+        ], $doc->descriptiveMetadataSections);
     }
 
     /**
