@@ -373,8 +373,8 @@ class Indexer
                 }
                 // There can be only one toplevel unit per UID, independently of backend configuration
                 $solrDoc->setField(self::$solrFields['toplevel'], $logicalUnit['id'] == $doc->getToplevelId());
-                $solrDoc->setField(self::$solrFields['title'], $metadata['title'][0]);
-                $solrDoc->setField(self::$solrFields['volume'], $metadata['volume'][0] ?? '');
+                $solrDoc->setField(self::$solrFields['title'], self::getTitle($document));
+                $solrDoc->setField(self::$solrFields['volume'], $document->getVolume());
                 // extract structure path
                 self::$extractedStructurePathNodes[$logicalUnit['id']] = self::extractStructurePathNodes($doc->tableOfContents, $logicalUnit['id']);
                 $processedStructurePath = self::buildStructurePathData(self::$extractedStructurePathNodes[$logicalUnit['id']], $doc->getToplevelId());
@@ -383,13 +383,13 @@ class Indexer
                 if (strtotime($metadata['date'][0])) {
                     $solrDoc->setField('date', self::getFormattedDate($metadata['date'][0]));
                 }
-                $solrDoc->setField(self::$solrFields['record_id'], $metadata['record_id'][0] ?? '');
-                $solrDoc->setField(self::$solrFields['purl'], $metadata['purl'][0] ?? '');
+                $solrDoc->setField(self::$solrFields['record_id'], $document->getRecordId());
+                $solrDoc->setField(self::$solrFields['purl'], $document->getPurl());
                 $solrDoc->setField(self::$solrFields['location'], $document->getLocation());
-                $solrDoc->setField(self::$solrFields['urn'], $metadata['urn']);
-                $solrDoc->setField(self::$solrFields['license'], $metadata['license']);
-                $solrDoc->setField(self::$solrFields['terms'], $metadata['terms']);
-                $solrDoc->setField(self::$solrFields['restrictions'], $metadata['restrictions']);
+                $solrDoc->setField(self::$solrFields['urn'], $document->getUrn());
+                $solrDoc->setField(self::$solrFields['license'], $document->getLicense());
+                $solrDoc->setField(self::$solrFields['terms'], $document->getTerms());
+                $solrDoc->setField(self::$solrFields['restrictions'], $document->getRestrictions());
                 $coordinates = json_decode($metadata['coordinates'][0] ?? '');
                 if (is_object($coordinates)) {
                     $feature = (array) $coordinates->features[0]; // @phpstan-ignore-line
@@ -728,6 +728,26 @@ class Indexer
         }
         // date doesn't match any standard
         return '';
+    }
+
+    /**
+     * Get title of the document, if empty use METS label or METS order label.
+     *
+     * @access private
+     *
+     * @static
+     *
+     * @param Document $document The METS document
+     *
+     * @return string The title of the document
+     */
+    private static function getTitle(Document $document): string
+    {
+        $title = $document->getTitle();
+        if (empty($title)) {
+            $title = !empty($document->getMetsLabel()) ? $document->getMetsLabel() : $document->getMetsOrderLabel();
+        }
+        return $title;
     }
 
     /**
